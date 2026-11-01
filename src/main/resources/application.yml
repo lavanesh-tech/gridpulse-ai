@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: gridpulse-ai
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5433}/${POSTGRES_DB:gridpulse}
+    username: ${POSTGRES_USER:gridpulse}
+    password: ${POSTGRES_PASSWORD:change-me-locally}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
