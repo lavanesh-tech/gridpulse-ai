@@ -10,6 +10,8 @@ import com.gridpulse.shared.domain.EnergyKwh;
 import com.gridpulse.shared.domain.PowerKw;
 import com.gridpulse.shared.domain.StateOfCharge;
 import com.gridpulse.shared.domain.TimeWindow;
+import com.gridpulse.shared.error.BusinessRuleException;
+import com.gridpulse.shared.error.NotFoundException;
 import com.gridpulse.station.Charger;
 import com.gridpulse.station.ChargerRepository;
 import com.gridpulse.station.ChargingStation;
@@ -55,6 +57,8 @@ class ChargingReservationIT extends PostgresIntegrationTest {
     UUID vehicle2;
     UUID charger1;
     UUID charger2;
+    UUID smallGridCharger1;
+    UUID smallGridCharger2;
 
     @BeforeEach
     void seed() {
@@ -67,6 +71,10 @@ class ChargingReservationIT extends PostgresIntegrationTest {
         ChargingStation station = stations.save(new ChargingStation(tenant, grid.getId(), "Depot A"));
         charger1 = chargers.save(new Charger(tenant, station.getId(), "A1", ConnectorType.CCS1, PowerKw.of(150))).getId();
         charger2 = chargers.save(new Charger(tenant, station.getId(), "A2", ConnectorType.CCS1, PowerKw.of(150))).getId();
+        GridConnection small = grids.save(new GridConnection(tenant, "Small feed", PowerKw.of(150)));
+        ChargingStation depotB = stations.save(new ChargingStation(tenant, small.getId(), "Depot B"));
+        smallGridCharger1 = chargers.save(new Charger(tenant, depotB.getId(), "B1", ConnectorType.CCS1, PowerKw.of(150))).getId();
+        smallGridCharger2 = chargers.save(new Charger(tenant, depotB.getId(), "B2", ConnectorType.CCS1, PowerKw.of(150))).getId();
     }
 
     private Vehicle vehicle(Fleet fleet) {
@@ -107,7 +115,7 @@ class ChargingReservationIT extends PostgresIntegrationTest {
     private boolean attempt(CountDownLatch go, UUID vehicle, UUID charger, TimeWindow w) throws InterruptedException {
         go.await();
         try {
-            service.reserve(tenant, vehicle, charger, w, PowerKw.of(100));
+            service.reserve(tenant, "tester", vehicle, charger, w, PowerKw.of(100));
             return true;
         } catch (ReservationConflictException e) {
             return false;
@@ -116,21 +124,39 @@ class ChargingReservationIT extends PostgresIntegrationTest {
 
     @Test
     void backToBackReservationsBothSucceed() {
-        service.reserve(tenant, vehicle1, charger1, window(0, 60), PowerKw.of(100));
-        service.reserve(tenant, vehicle2, charger1, window(60, 120), PowerKw.of(100));
+        service.reserve(tenant, "tester", vehicle1, charger1, window(0, 60), PowerKw.of(100));
+        service.reserve(tenant, "tester", vehicle2, charger1, window(60, 120), PowerKw.of(100));
     }
 
     @Test
     void vehicleCannotBeOnTwoChargersAtOnce() {
-        service.reserve(tenant, vehicle1, charger1, window(0, 60), PowerKw.of(100));
-        assertThatThrownBy(() -> service.reserve(tenant, vehicle1, charger2, window(30, 90), PowerKw.of(100)))
+        service.reserve(tenant, "tester", vehicle1, charger1, window(0, 60), PowerKw.of(100));
+        assertThatThrownBy(() -> service.reserve(tenant, "tester", vehicle1, charger2, window(30, 90), PowerKw.of(100)))
                 .isInstanceOf(ReservationConflictException.class);
     }
 
     @Test
+    void reservationThatWouldExceedGridCapacityIsRejected() {
+        service.reserve(tenant, "tester", vehicle1, smallGridCharger1, window(0, 60), PowerKw.of(100));
+        assertThatThrownBy(() -> service.reserve(tenant, "tester", vehicle2, smallGridCharger2, window(30, 90), PowerKw.of(100)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("grid capacity exceeded");
+        // Not overlapping in time: fits.
+        service.reserve(tenant, "tester", vehicle2, smallGridCharger2, window(60, 120), PowerKw.of(100));
+    }
+
+    @Test
+    void anotherTenantsChargerIsNotFound() {
+        UUID otherTenant = UUID.randomUUID();
+        jdbc.update("INSERT INTO tenant (id, name) VALUES (?, ?)", otherTenant, "other-" + otherTenant);
+        assertThatThrownBy(() -> service.reserve(otherTenant, "intruder", vehicle1, charger1, window(0, 60), PowerKw.of(50)))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
     void cancelledReservationFreesTheSlot() {
-        ChargingSession s = service.reserve(tenant, vehicle1, charger1, window(0, 60), PowerKw.of(100));
-        service.cancel(s.getId());
-        service.reserve(tenant, vehicle2, charger1, window(0, 60), PowerKw.of(100));
+        ChargingSession s = service.reserve(tenant, "tester", vehicle1, charger1, window(0, 60), PowerKw.of(100));
+        service.cancel(tenant, "tester", s.getId());
+        service.reserve(tenant, "tester", vehicle2, charger1, window(0, 60), PowerKw.of(100));
     }
 }

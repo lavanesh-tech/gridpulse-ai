@@ -5,27 +5,27 @@ _Last updated: 2026-11-01_
 ## GitHub
 https://github.com/lavanesh-tech/gridpulse-ai — branch `main`. Sole author: Lavanesh Thirukonda Mahendran.
 
-## Milestone 1 — Foundation + Database: DONE (verified)
-Commit `088fb76`. Verified on author's Mac (JDK 21.0.12, Docker Desktop): `./gradlew build` passed with
-9/9 tests; Compose smoke test passed (Postgres OK, Redis PONG).
+## Milestone 1 — Foundation + Database: DONE (088fb76, verified)
+## Milestone 2 — Fleet Management + Charging Engine: DONE (1688258, verified)
+Benchmark results in BENCHMARKS.md.
 
-## Milestone 2 — Fleet Management + Charging Engine: written, NOT YET VERIFIED
-- `scheduling`: `ChargingRequest`, `ChargerSpec`, `GridLimit`, `SchedulingProblem` (15-min slots),
-  `CapacityLedger`, `BaselineScheduler` (FCFS), `PrioritySlackScheduler` (PriorityQueue, least slack, power
-  modulation), `ScheduleValidator` (10 violation types, sweep line), `ScheduleMetrics`, `SyntheticScenarioGenerator`
-- `analytics`: `SchedulingBenchmark` (`./gradlew benchmark` → `benchmarks/results/`)
-- JPA entities + repositories: `Fleet`, `Vehicle`, `GridConnection`, `ChargingStation`, `Charger`, `ChargingSession`
-- `ChargingSessionService.reserve/cancel`; session state machine
-- Flyway `V2__charging_sessions.sql` with btree_gist exclusion constraints (charger + vehicle overlap)
-- Tests: scheduler behaviour, 10 seeded property-style runs with 0 violations, validator per violation type,
-  session lifecycle, concurrent reservation IT (Testcontainers), migration IT
+## Milestone 3 — REST APIs + Security: written, NOT YET VERIFIED
+- Spring Security OAuth2 resource server; HS256 JWT issued by `POST /api/v1/auth/token`; BCrypt passwords (`app_user`, V3)
+- Roles ADMIN / FLEET_MANAGER / OPERATOR / VIEWER via `@PreAuthorize`; tenant from JWT; tenant-scoped lookups (404 cross-tenant)
+- REST controllers + DTOs + Bean Validation for fleets, vehicles, grid connections, stations/chargers, outages,
+  sessions (reserve/cancel/start/complete/interrupt), schedule preview, audit events
+- Reservation rules: compatibility, in-service, power limits, grid capacity (row lock + sweep), no overlap (DB)
+- RFC 9457 error responses; token-bucket rate limiting; JDBC audit log on every write; Swagger UI
+- Tests: `ApiIT` (auth, RBAC, validation, tenant isolation, full flow), extended `ChargingReservationIT`
+  (grid capacity, cross-tenant), `RateLimiterTest`
 
 ## Known issues / limitations
-- Tenant ownership checks for reserve() arrive with Milestone 3 security.
-- Cost/tariff optimization, disruption recalculation: Milestone 4.
-- Local ports are 5433 (Postgres) and 6380 (Redis) to avoid clashing with other local databases.
+- Optimized scheduler does not yet outperform baseline on overall deadline success (M2 benchmark) → M4.
+- Schedule preview ignores capacity already held by existing reservations → M4.
+- Rate limiting is per instance (in memory) → Redis in M8.
+- Local ports: Postgres 5433, Redis 6380. App needs GRIDPULSE_JWT_SECRET (>= 32 bytes) to start.
 
 ## Next steps
-1. Author runs `./scripts/publish-milestone.sh "<M2 message>"` (verify → benchmark → commit → push).
-2. Record benchmark results in BENCHMARKS.md from the generated JSON.
-3. Milestone 3: REST APIs, DTOs, validation, OpenAPI, Spring Security, JWT/OIDC, RBAC, tenant isolation.
+1. Author runs the publish script for M3.
+2. Milestone 4: tariff/cost model, cost-aware optimization, per-priority metrics, optimizer improvement,
+   disruption recalculation, preview that respects existing reservations.

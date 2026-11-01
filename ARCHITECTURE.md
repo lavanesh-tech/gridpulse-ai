@@ -61,3 +61,19 @@ SchedulingProblem ──▶ ChargingScheduler (Baseline | PrioritySlack) ──�
 2. Validator (any schedule, any source).
 3. PostgreSQL exclusion constraints on `charging_session` (charger and vehicle, live statuses only), which
    hold even when two requests race on different app instances.
+
+## Security (Milestone 3)
+```
+request ─▶ BearerTokenAuthenticationFilter (validate JWT signature, issuer, expiry)
+        ─▶ RateLimitFilter (per user / per IP, stricter for login)
+        ─▶ URL rules (public: login, health, docs; everything else authenticated)
+        ─▶ @PreAuthorize role check on the controller method
+        ─▶ service: tenant id from CurrentUser (JWT claim) → findByIdAndTenantId(...)
+```
+- The API is an OAuth2 **resource server**. Tokens are issued locally (HS256) for development/demo; swapping
+  the `JwtDecoder` for an issuer URI accepts tokens from an external OIDC provider instead.
+- **Tenant isolation:** every repository lookup includes `tenantId`; other tenants' ids return 404, not 403.
+- **Audit:** every write appends to `audit_event` (JSONB details) via Spring JDBC.
+- Module dependencies are one-directional and checked by `ModularityTests`:
+  `identity → audit`; `fleet, grid → identity, audit`; `vehicle → fleet`; `station → grid`;
+  `session → vehicle, station`; `scheduling → identity`.

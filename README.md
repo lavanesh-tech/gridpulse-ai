@@ -7,7 +7,7 @@ after disruptions, and compares optimized schedules against a documented baselin
 > All data is **synthetic**. Benchmark numbers in this repo come only from reproducible runs
 > described in [BENCHMARKS.md](BENCHMARKS.md); none represent real-world business impact.
 
-**Status:** Milestone 2 (Fleet Management + Charging Engine) — see [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+**Status:** Milestone 3 (REST APIs + Security) — see [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
 ## Stack
 Java 21 · Spring Boot 3.5 · Spring Modulith · PostgreSQL 16 + pgvector · Redis · Flyway · Gradle ·
@@ -17,10 +17,11 @@ Testcontainers. Later milestones add Spring Security/OAuth2, Spring AI, React + 
 Prerequisites: JDK 21 and Docker Desktop. Local ports: Postgres 5433, Redis 6380.
 
 ```bash
-cp .env.example .env
-./scripts/verify.sh          # builds, runs all tests, smoke-tests Docker Compose
-docker compose up -d         # Postgres (pgvector) + Redis
-./gradlew bootRun            # app on :8080, health at /actuator/health
+cp .env.example .env          # then set GRIDPULSE_JWT_SECRET (openssl rand -base64 48) and GRIDPULSE_ADMIN_PASSWORD
+./scripts/verify.sh           # builds, runs all tests, smoke-tests Docker Compose
+docker compose up -d          # Postgres (pgvector) + Redis
+set -a; source .env; set +a   # export the variables for the app
+./gradlew bootRun             # app on :8080 -> /swagger-ui.html, /actuator/health
 ./gradlew benchmark          # baseline vs optimized scheduler -> benchmarks/results/
 ```
 

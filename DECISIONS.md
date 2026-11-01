@@ -53,3 +53,22 @@ a proven optimum; an exact solver (MILP) is out of scope.
 ## ADR-012: Database exclusion constraints for reservations
 **Decision:** `EXCLUDE USING gist (charger_id WITH =, tstzrange(...) WITH &&)` plus the same for vehicles.
 **Why:** Application-level "check then insert" has a race window; the database constraint is atomic.
+
+## ADR-013: OAuth2 resource server with locally issued HS256 JWTs
+**Decision:** Spring Security resource server validating JWTs; a login endpoint issues them for local/demo use.
+**Why:** No external identity provider to run or pay for, while the API code is identical to one that trusts Cognito/Keycloak.
+**Trade-off:** Symmetric key must be protected; production should use an OIDC provider (asymmetric keys, MFA, rotation).
+
+## ADR-014: In-memory token-bucket rate limiting
+**Decision:** Per-instance `ConcurrentHashMap` of token buckets.
+**Why:** Simple and testable for a single instance.
+**Revisit:** With multiple ECS tasks (M8), move buckets to Redis so limits are global.
+
+## ADR-015: Grid capacity enforced with a row lock at reservation time
+**Decision:** `SELECT … FROM grid_connection … FOR UPDATE`, then sum overlapping live sessions, then insert.
+**Why:** Capacity is a constraint across many rows; exclusion constraints cannot express "sum ≤ limit". Locking the
+grid row serialises only reservations on the same grid.
+
+## ADR-016: 404 for other tenants' resources
+**Decision:** Cross-tenant ids are reported as not found.
+**Why:** A 403 would confirm that the id exists, leaking information.

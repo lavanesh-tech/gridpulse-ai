@@ -24,6 +24,25 @@ Raw output: [`benchmarks/results/scheduling-latest.json`](benchmarks/results/sch
 | energyDeliveredKwh | Σ session power × duration |
 | hardConstraintViolations | count from the independent validator |
 
-## Results
-See the JSON/CSV committed with each milestone. Not yet covered (later milestones): electricity cost and
+## Results — Milestone 2 (commit 1688258, author's Mac, JDK 21.0.12, seed 42)
+| Scenario | Algorithm | Deadlines met | Success rate | Violations | Charger utilization | Median compute |
+|---|---|---|---|---|---|---|
+| small (50) | baseline-fcfs | 50/50 | 100.0% | 0 | 19.6% | 0.55 ms |
+| small (50) | priority-slack | 50/50 | 100.0% | 0 | 17.7% | 0.44 ms |
+| medium (500) | baseline-fcfs | 461/500 | 92.2% | 0 | 29.2% | 1.83 ms |
+| medium (500) | priority-slack | 457/500 | 91.4% | 0 | 26.9% | 4.28 ms |
+| large (2,000) | baseline-fcfs | 1959/2000 | 98.0% | 0 | 30.4% | 18.52 ms |
+| large (2,000) | priority-slack | 1944/2000 | 97.2% | 0 | 28.9% | 42.69 ms |
+
+### Honest reading
+- Both algorithms satisfy every hard constraint on every scenario.
+- **The priority-slack scheduler does not beat the baseline on overall deadline success here** (−0.8 points on
+  medium and large) and is ~2× slower. It serves high-priority vehicles first by design, which can cost total
+  count; the current metric does not yet measure priority-weighted success, so the trade-off is not visible.
+- It does win the targeted case it was designed for (`SchedulerTest.optimizedMeetsBothDeadlinesByServingLeastSlackFirst`),
+  but that is a hand-built scenario, not evidence of general superiority.
+- Action for Milestone 4: add per-priority success metrics, then improve the optimizer (e.g. choose charger by
+  least wasted capacity instead of earliest finish, repair pass for missed vehicles) and re-measure.
+
+Later milestones add: electricity cost and
 cost delta vs baseline (M4), API p50/p95/p99 (M7, k6), DB query timings (M7), test coverage (JaCoCo report).

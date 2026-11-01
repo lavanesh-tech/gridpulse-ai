@@ -16,3 +16,18 @@ management:
     web:
       exposure:
         include: health,info
+gridpulse:
+  security:
+    # HS256 signing key, >= 32 bytes. Supply via environment; never commit a real value.
+    jwt-secret: ${GRIDPULSE_JWT_SECRET:}
+    issuer: gridpulse-ai
+    token-ttl: 1h
+    requests-per-minute: 120
+    login-requests-per-minute: 10
+  bootstrap:
+    # If set and no users exist, creates a demo tenant and an ADMIN user on startup (local use only).
+    admin-username: ${GRIDPULSE_ADMIN_USERNAME:admin}
+    admin-password: ${GRIDPULSE_ADMIN_PASSWORD:}
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

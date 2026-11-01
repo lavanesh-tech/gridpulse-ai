@@ -124,3 +124,60 @@ reservation frees the slot.
 ## 15. Benchmarking honestly
 Seeded data (reproducible), warm-up runs (JIT compilation), several measured runs (median and p95), the same input for
 both algorithms, every schedule validated, environment recorded. Never quote a number that isn't in the results file.
+
+---
+
+# Milestone 3 concepts
+
+## 16. REST API design
+- **Resources are nouns** (`/fleets`, `/vehicles/{id}`); HTTP verbs are actions (GET read, POST create/command, PUT replace).
+- **Commands on state machines** are sub-resources: `POST /sessions/{id}/cancel`.
+- **Status codes carry meaning**: 201 created, 400 bad input, 401 who are you, 403 not allowed, 404 not found,
+  409 conflicts with current state, 422 valid shape but breaks a rule, 429 slow down.
+- **DTOs** (`CreateFleetRequest`, `FleetResponse`) are separate from entities, so the database shape can change
+  without breaking clients and clients can never set fields like `tenantId` or `version`.
+- **Bean Validation** (`@NotBlank`, `@Positive`, `@Pattern`) rejects bad input before any business code runs.
+- **Problem Details (RFC 9457)**: one consistent error format, produced in one place (`ApiExceptionHandler`).
+
+## 17. Authentication vs authorization
+- **Authentication**: proving who you are (username + password → JWT).
+- **Authorization**: what you may do (roles via `@PreAuthorize`, tenant scoping in services).
+
+## 18. JWT
+A JWT is three base64 parts: header, claims, signature. The server signs `{sub, tenant_id, roles, exp}` with a secret
+key; anyone can *read* the claims but nobody can *change* them without breaking the signature. The API is
+**stateless**: no server-side session, the token carries identity, so any instance can serve any request.
+Never put secrets in claims. Short expiry (1 h) limits damage from a stolen token.
+
+## 19. OAuth2 and OIDC in one paragraph
+OAuth2 defines roles: the **authorization server** issues tokens, the **resource server** (our API) validates them,
+the **client** (React app) carries them. OIDC adds a standard identity layer on top (who the user is). Our API is a
+resource server; for local use it also issues tokens itself. In production you'd point it at Cognito or Keycloak.
+
+## 20. Password storage
+Never store passwords. Store a **BCrypt hash**: slow on purpose and salted, so stolen hashes are expensive to crack.
+On login we compare against a dummy hash when the user doesn't exist, so response time doesn't reveal valid usernames.
+
+## 21. Multi-tenancy
+Many customers share one database; every row has `tenant_id`. The rule: **the tenant comes from the token, never the
+request**. Every lookup is `findByIdAndTenantId`. If tenant B asks for tenant A's fleet id, the answer is 404 —
+the same as for a non-existent id — so nothing leaks.
+
+## 22. Rate limiting: token bucket
+Each user has a bucket of N tokens; each request spends one; tokens refill at N per minute. Allows short bursts,
+caps sustained rate. Login is limited much harder to slow password guessing.
+
+## 23. Transactions and locks (grid capacity)
+"Grid load ≤ limit" depends on *many* rows, so a unique/exclusion constraint can't enforce it. We open a transaction,
+`SELECT … FOR UPDATE` the grid row (other reservations on the same grid now wait), sum overlapping sessions with a
+sweep line, insert if it fits, commit. Two concurrent requests are forced to happen one after the other.
+**Pessimistic locking** (lock first) suits short, contended operations; **optimistic locking** (`@Version`, fail on
+conflict) suits rare conflicts — the project uses both, each where it fits.
+
+## 24. JDBC vs JPA in this codebase
+| Use | Tool | Why |
+|---|---|---|
+| Entities with behaviour and lifecycle | JPA/Hibernate | Dirty checking, optimistic locking, less boilerplate |
+| Insert-only audit rows | `JdbcTemplate` | One SQL statement; no entity needed |
+| Schedule preview read model (join of chargers, stations, grids) | `JdbcTemplate` | One query, exactly the columns needed |
+| `FOR UPDATE` lock + aggregate | `JdbcTemplate` | Explicit SQL is clearer than JPQL lock hints |
