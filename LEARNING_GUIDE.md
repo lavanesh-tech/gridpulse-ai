@@ -268,3 +268,22 @@ prompt; the model has no write tools; tenant scope is fixed in code, not chosen 
 **hit@k**: did the right document appear in the top k? **MRR**: average of 1/rank of the first right result.
 The sample set mixes keyword questions with paraphrases; the offline embedder scores 0.93 hit@3, failing a paraphrase
 ("cheapest overnight" vs "off-peak") — exactly the gap real semantic embeddings should close. Measure, then claim.
+
+## 41. React components and state
+UI is a function of state. Components receive props, keep local state with `useState`, and re-render when it changes.
+
+## 42. TypeScript at the API boundary
+`api/types.ts` mirrors the backend DTOs, so a renamed field fails the build instead of failing in the browser.
+
+## 43. Server state with TanStack Query
+Data from the server is cached by a query key; mutations invalidate keys so lists refresh. Loading and error states come for free.
+
+## 44. Vite and code splitting
+`import()` of a page creates a separate chunk that downloads only when the route is visited.
+
+## 45. Tailwind
+Utility classes composed in markup; design tokens (colors, fonts) live once in `styles.css` under `@theme`.
+
+## 46. Testing UIs
+Testing Library queries by role and label, the way a user finds things; `fetch` is mocked so tests need no backend.
+Time-dependent tests run with `TZ=UTC` so they pass on any machine.

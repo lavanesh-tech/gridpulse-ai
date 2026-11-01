@@ -17,4 +17,11 @@ docker compose up -d --wait
 docker compose exec -T postgres psql -U gridpulse -d gridpulse -c "select 1" >/dev/null && echo "Postgres OK"
 docker compose exec -T redis redis-cli ping
 
+echo "== Frontend (Node) =="
+if ! command -v npm >/dev/null; then
+  if command -v brew >/dev/null; then brew install node; else echo "Node.js is missing. Install it from https://nodejs.org (LTS), then re-run."; exit 1; fi
+fi
+node -v
+(cd frontend && npm install --no-audit --no-fund && npm test && npm run build)
+
 echo "ALL CHECKS PASSED"

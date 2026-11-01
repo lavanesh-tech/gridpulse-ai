@@ -31,6 +31,13 @@ set -a; source .env; set +a   # export the variables for the app
 ./gradlew benchmark          # baseline vs optimized scheduler -> benchmarks/results/
 ```
 
+## Run the web console
+```bash
+./gradlew bootRun          # API on :8080 (needs GRIDPULSE_JWT_SECRET, see .env.example)
+cd frontend && npm install && npm run dev   # http://localhost:5173, /api proxied to :8080
+npm test                   # Vitest (runs in UTC)
+```
+
 ## Enabling the AI Energy Advisor (optional)
 Everything runs without an AI key: retrieval uses an offline embedder and the advisor returns sources and computed
 facts. To get natural-language answers with OpenAI, add to `.env` (git-ignored) and restart:

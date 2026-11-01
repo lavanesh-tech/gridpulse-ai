@@ -116,3 +116,11 @@ returned; answers whose citations reference no provided source are flagged `grou
 **Decision:** `SET LOCAL hnsw.ef_search = 200`, plus `hnsw.iterative_scan = relaxed_order` on pgvector ≥ 0.8, then re-sort.
 **Why:** HNSW filters after finding candidates; with many tenants one tenant's chunks could be crowded out.
 **Revisit:** per-tenant partial indexes or partitioning at larger scale.
+
+## ADR-025: Frontend stack and design
+- React + TypeScript + Vite + Tailwind 4 + TanStack Query + ECharts; every dependency pinned to an exact version.
+- package-lock.json is created on the first `npm install` on the author's machine and committed from then on.
+- Visual direction "control-room logbook": cool fog/paper neutrals, amber/teal/indigo for priority, red only for problems.
+  The schedule night-strip (charger lanes over tariff bands with grid load below) is the one prominent element.
+- ECharts is tree-shaken and the planner route lazy-loaded to keep the initial bundle small.
+- JWT in sessionStorage (cleared when the tab closes); acceptable for a demo, httpOnly cookie + BFF noted for production.

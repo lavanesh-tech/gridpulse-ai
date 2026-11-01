@@ -32,9 +32,8 @@ Benchmark results in BENCHMARKS.md.
 - Tests: TariffAndCostTest, ExistingBookingsTest, ScheduleRecalculatorTest, TariffValidationTest, SchedulerTest additions,
   ApiIT M4 flow (tariff RBAC/validation, preview around a reservation, recalculation, analytics, history)
 
-## Milestone 5 — Spring AI + RAG: written, NOT YET VERIFIED on the author's machine
-Plain-Java parts (chunker, offline embedder, citations, retrieval metrics, sample corpus) compiled and measured in the
-assistant's workspace and byte-identical in the repo; Spring AI wiring compiles only in the Gradle build.
+## Milestone 5 — Spring AI + RAG: DONE (d65c449, verified: 86 tests, 0 failures)
+First run caught the lexical relevance threshold set too low (0.10); raised to 0.20 from measured collision noise.
 - Spring AI 1.0.3 (OpenAI starter), all models `none` by default → app and tests need no key
 - V5: `knowledge_document`, `knowledge_chunk` (vector(1536), HNSW cosine, embedding_model per chunk)
 - Ingestion (chunk → embed → store, SHA-256 dedup), tenant-filtered search, relevance threshold, filtered-HNSW tuning
@@ -44,6 +43,14 @@ assistant's workspace and byte-identical in the repo; Spring AI wiring compiles 
 - Tests: `TextAndRetrievalUnitTest`, `AdvisorIT` (fake chat model: isolation, refusal, citations, type filter, dedup,
   tenant-scoped delete, evaluation, tool safety, explanation), ApiIT advisor flow without a key
 
+## Milestone 6 — React Frontend: WRITTEN, awaiting verification on the Mac
+- `frontend/`: React 19 + TypeScript 5.9 + Vite 7 + Tailwind 4 + TanStack Query 5 + ECharts 6 (tree-shaken), react-router 7
+- Pages: sign-in, dashboard (analytics), fleets/vehicles, stations/chargers, planner (night-strip timeline, tariff bands,
+  grid load vs capacity, strategy comparison, charger-failure what-if), advisor (cited answers)
+- Role-aware UI (viewer cannot run plans); JWT kept in sessionStorage; 401 signs out
+- Tests: 19 Vitest + Testing Library tests passed in the assistant workspace; tsc clean; production build OK
+  (initial bundle 289 kB / 91 kB gzip; planner chunk lazy-loaded). package-lock.json is generated on first `npm install`.
+
 ## Known issues / limitations
 - Deadlines-first helps urgent vehicles at the expense of priority 0 (by design); cost-first meets fewer deadlines than baseline.
 - Recalculation re-plans from the next slot boundary (up to one slot lost); late failures may be unrecoverable under ALAP.
@@ -52,6 +59,6 @@ assistant's workspace and byte-identical in the repo; Spring AI wiring compiles 
 - Local ports: Postgres 5433, Redis 6380. App needs GRIDPULSE_JWT_SECRET (>= 32 bytes) to start.
 
 ## Next steps
-1. Author runs the publish script for M5.
-2. Optional: add OPENAI_API_KEY, re-ingest samples, run /advisor/evaluate and record real-embedding results.
-3. Milestone 6: React + TypeScript frontend (Vite, Tailwind, TanStack Query, ECharts).
+1. Optional: add OPENAI_API_KEY, re-ingest samples, run /advisor/evaluate and record real-embedding results.
+2. Verify + publish Milestone 6.
+3. Milestone 7: testing + observability (E2E, k6, Actuator/Micrometer).

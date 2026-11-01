@@ -94,3 +94,11 @@ and is bound into every query and tool instance. Tools are read-only re-evaluati
 Retrieved text is treated as untrusted (the system prompt tells the model to ignore instructions inside sources).
 Every advisor call is audited (question hash, source/citation counts, whether the model was called).
 **Degrades without a key:** retrieval, facts and comparisons still work; only the natural-language answer is absent.
+
+## Web console (Milestone 6)
+- `frontend/` is a separate Vite app; in dev, `/api` is proxied to the Spring Boot app, so there is no CORS setup.
+- `api/client.ts` is the only place that calls `fetch`: adds the bearer token, maps RFC 9457 problems to `ApiError`, signs out on 401.
+- `api/hooks.ts` wraps every endpoint in TanStack Query; mutations invalidate the queries they change.
+- `lib/schedule.ts` turns API schedules into chart data (lanes, bars, tariff bands, load steps) as pure, unit-tested functions.
+- The planner page and ECharts load lazily so sign-in and dashboard stay small.
+- The UI enforces roles only for convenience; the server is the authority (RBAC + tenant from JWT).
