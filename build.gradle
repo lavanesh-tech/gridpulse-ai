@@ -16,11 +16,15 @@ repositories { mavenCentral() }
 
 ext {
     springModulithVersion = '1.4.4'
+    springAiVersion = '1.0.3'
     set('testcontainers.version', '1.21.4')
 }
 
 dependencyManagement {
-    imports { mavenBom "org.springframework.modulith:spring-modulith-bom:${springModulithVersion}" }
+    imports {
+        mavenBom "org.springframework.modulith:spring-modulith-bom:${springModulithVersion}"
+        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+    }
 }
 
 dependencies {
@@ -32,6 +36,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.springframework.modulith:spring-modulith-starter-core'

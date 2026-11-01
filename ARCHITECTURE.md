@@ -77,3 +77,20 @@ request ─▶ BearerTokenAuthenticationFilter (validate JWT signature, issuer, 
 - Module dependencies are one-directional and checked by `ModularityTests`:
   `identity → audit`; `fleet, grid → identity, audit`; `vehicle → fleet`; `station → grid`;
   `session → vehicle, station`; `scheduling → identity`.
+
+## AI Energy Advisor (Milestone 5)
+```
+question ─▶ embed (OpenAI or offline lexical) ─▶ pgvector search  WHERE tenant_id = <from JWT>  ─▶ top-k chunks
+                                                                                                 │ score ≥ threshold?
+                                                       no ──▶ "documents do not cover this" (model NOT called)
+                                                       yes ─▶ LLM with numbered sources ─▶ answer ─▶ keep only
+                                                                                          citations [Sn] that exist
+plan ─▶ deterministic scheduler + validator ─▶ facts JSON ─▶ LLM narrative
+                                                   ▲            │ may call read-only tools
+                                                   └── AdvisorTools (re-run engine; feasible only if 0 violations)
+```
+**Safety boundary.** The model never sees SQL, secrets, other tenants' data or write APIs. Tenant comes from the JWT
+and is bound into every query and tool instance. Tools are read-only re-evaluations and capped at 8 per request.
+Retrieved text is treated as untrusted (the system prompt tells the model to ignore instructions inside sources).
+Every advisor call is audited (question hash, source/citation counts, whether the model was called).
+**Degrades without a key:** retrieval, facts and comparisons still work; only the natural-language answer is absent.

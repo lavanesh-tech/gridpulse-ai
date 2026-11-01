@@ -1,4 +1,24 @@
 spring:
+  ai:
+    # Spring AI model selection. "none" keeps OpenAI off (no key needed); set SPRING_AI_MODEL_CHAT and
+    # SPRING_AI_MODEL_EMBEDDING to "openai" together with OPENAI_API_KEY to enable the real models.
+    model:
+      chat: ${SPRING_AI_MODEL_CHAT:none}
+      embedding: ${SPRING_AI_MODEL_EMBEDDING:none}
+      image: none
+      moderation: none
+      audio:
+        speech: none
+        transcription: none
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.2
+      embedding:
+        options:
+          model: text-embedding-3-small
   application:
     name: gridpulse-ai
   datasource:
@@ -28,6 +48,13 @@ gridpulse:
     # If set and no users exist, creates a demo tenant and an ADMIN user on startup (local use only).
     admin-username: ${GRIDPULSE_ADMIN_USERNAME:admin}
     admin-password: ${GRIDPULSE_ADMIN_PASSWORD:}
+  ai:
+    # Embeddings: "auto" uses the configured embedding model if any, else the offline lexical embedder.
+    embeddings: ${GRIDPULSE_AI_EMBEDDINGS:auto}
+    retrieval-top-k: 5
+    # measured: 0.10 let 14% of random off-topic queries through (hash collisions); 0.20 lets 0.12%
+    min-score-lexical: 0.20
+    min-score-model: 0.30
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

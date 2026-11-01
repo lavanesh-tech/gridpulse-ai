@@ -225,3 +225,46 @@ combined result. Re-using one well-tested engine is safer than writing a separat
 Aggregates (count by status, energy = power × duration clipped to a date range, utilization per charger) are computed
 in PostgreSQL with `GROUP BY`, `LEAST/GREATEST` and `EXTRACT(EPOCH …)`. Pushing aggregation to the database moves a
 few rows over the network instead of every session.
+
+---
+
+# Milestone 5 concepts
+
+## 33. What an LLM is good and bad at here
+Good: turning numbers and documents into a clear explanation. Bad: arithmetic, constraint checking, knowing your
+company's policies. So the design gives each job to the right component: Java computes, SQL retrieves, the LLM explains.
+
+## 34. Embeddings
+An embedding model turns text into a list of numbers (here 1536) so that texts with similar meaning are close
+together. "Closeness" is measured with **cosine similarity** (angle between vectors): 1 = same direction, 0 = unrelated.
+pgvector's `<=>` operator returns cosine *distance* = 1 − similarity.
+
+## 35. RAG — Retrieval-Augmented Generation
+1. **Ingest:** split documents into chunks (~800 characters, 150 overlap, heading kept) → embed → store.
+2. **Retrieve:** embed the question → find the nearest chunks for *this tenant*.
+3. **Generate:** give the model only those chunks, numbered [S1]…[Sn], and require citations.
+Why chunk? Models have limited context and a whole document dilutes the match. Why overlap? So a fact cut in half by
+a boundary still appears whole in one chunk.
+
+## 36. pgvector and HNSW
+`vector(1536)` is a column type. Exact search compares the query with every row (slow at scale). **HNSW** is a
+graph index that finds *approximately* nearest neighbours fast. Catch: filters (`WHERE tenant_id = ?`) apply after the
+index proposes candidates, so you may get fewer results than asked — see ADR-024 for the fix used.
+
+## 37. Grounding and citations
+"Grounded" means every claim comes from a provided source. We enforce what we can in code: no relevant source → no
+model call; citations are parsed and checked against the sources actually sent; invalid ones are dropped.
+
+## 38. Tool calling (function calling)
+The model can ask the application to run a function (`@Tool` methods) and gets the result back before answering.
+Here tools only *re-run the deterministic scheduler* for alternatives (another algorithm, a priority change). The model
+can suggest; Java decides feasibility. Nothing is saved.
+
+## 39. Prompt injection
+A document could contain "ignore your instructions and…". Defences used: sources are labelled untrusted in the system
+prompt; the model has no write tools; tenant scope is fixed in code, not chosen by the model.
+
+## 40. Evaluating retrieval
+**hit@k**: did the right document appear in the top k? **MRR**: average of 1/rank of the first right result.
+The sample set mixes keyword questions with paraphrases; the offline embedder scores 0.93 hit@3, failing a paraphrase
+("cheapest overnight" vs "off-peak") — exactly the gap real semantic embeddings should close. Measure, then claim.

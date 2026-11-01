@@ -113,6 +113,39 @@ class ApiIT extends PostgresIntegrationTest {
     }
 
     @Test
+    void advisorWorksWithoutAnAiKeyAndEnforcesRoles() throws Exception {
+        String admin = token(user("a", Role.ADMIN));
+        String viewer = token(user("a", Role.VIEWER));
+
+        mvc.perform(get("/api/v1/advisor/status").header("Authorization", "Bearer " + viewer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.chatModelConfigured").value(false))
+                .andExpect(jsonPath("$.embeddingModel").value("lexical-hash-v1"));
+
+        postJson("/api/v1/advisor/documents/samples", viewer, Map.of()).andExpect(status().isForbidden());
+        postJson("/api/v1/advisor/documents/samples", admin, Map.of())
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(4)));
+        postJson("/api/v1/advisor/documents", admin, Map.of("title", "x", "docType", "OTHER", "content", " "))
+                .andExpect(status().isBadRequest());
+
+        // No chat model configured: sources are still returned, no AI answer is invented.
+        postJson("/api/v1/advisor/ask", viewer, Map.of("question", "When is the off-peak tariff period?"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.aiAvailable").value(false))
+                .andExpect(jsonPath("$.answer").doesNotExist())
+                .andExpect(jsonPath("$.sources[0].title").value("Time-of-Use Tariff Guide (synthetic sample)"));
+
+        postJson("/api/v1/advisor/evaluate", admin, Map.of())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questions").value(14))
+                .andExpect(jsonPath("$.k").value(3));
+
+        String otherTenantAdmin = token(user("b", Role.ADMIN));
+        mvc.perform(get("/api/v1/advisor/documents").header("Authorization", "Bearer " + otherTenantAdmin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
     void validationErrorsReturnProblemDetailWithFieldErrors() throws Exception {
         String manager = token(user("a", Role.FLEET_MANAGER));
         postJson("/api/v1/fleets", manager, Map.of("name", " "))

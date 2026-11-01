@@ -39,6 +39,13 @@ JWT claims: `sub` (username), `tenant_id`, `roles` (one of ADMIN, FLEET_MANAGER,
 | GET | `/api/v1/sessions/history?from=&to=&page=&size=` | any |
 | GET | `/api/v1/analytics/summary?from=&to=` | any |
 | GET | `/api/v1/audit-events?limit=` | ADMIN |
+| GET | `/api/v1/advisor/status` | any |
+| GET | `/api/v1/advisor/documents` | any |
+| POST | `/api/v1/advisor/documents`, `/documents/samples` | ADMIN |
+| DELETE | `/api/v1/advisor/documents/{id}` | ADMIN |
+| POST | `/api/v1/advisor/ask` | any |
+| POST | `/api/v1/advisor/explain-schedule` | ADMIN, FLEET_MANAGER, OPERATOR |
+| POST | `/api/v1/advisor/evaluate` | ADMIN |
 
 ## Status codes
 | Code | Meaning |
@@ -96,3 +103,15 @@ Plans, applies the outage/curtailment from `at`, and re-plans the rest. Response
 - `GET /api/v1/analytics/summary?from=…&to=…` — sessions by status, scheduled energy (kWh, clipped to the range,
   excluding cancelled), distinct vehicles, per-charger sessions/occupied hours/utilization. Range ≤ 366 days.
 - `GET /api/v1/sessions/history?from=…&to=…&page=0&size=50` — sessions overlapping the range, newest first, paged (size ≤ 200).
+
+
+## AI Energy Advisor
+- `POST /api/v1/advisor/documents` `{"title","source","docType":"POLICY|TARIFF|GRID|PROCEDURE|OTHER","content"}` — plain
+  text/Markdown up to 200,000 characters; identical content is stored once (`duplicate: true`).
+- `POST /api/v1/advisor/documents/samples` — loads four clearly-labelled **synthetic** policy documents.
+- `POST /api/v1/advisor/ask` `{"question","docType"?}` → `answer`, `grounded`, `citations` (`S1`… with document, chunk,
+  score, excerpt), `sources`, `aiAvailable`, models used. Nothing relevant → fixed "not covered" answer, model not called.
+- `POST /api/v1/advisor/explain-schedule` — same body as schedule preview → `facts` (engine output), `comparison` of all
+  three algorithms, `narrative` (if a chat model is configured) and `toolCalls` (alternatives the model evaluated).
+- `POST /api/v1/advisor/evaluate` `{"cases":[{"question","expectedDocumentTitle"}], "k":3}` → hit@k, MRR, per-question
+  ranks. Empty body uses the bundled sample set.

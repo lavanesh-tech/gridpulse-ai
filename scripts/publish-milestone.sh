@@ -18,6 +18,11 @@ echo "== Benchmark (seeded synthetic data) =="
 echo "Committing as: $(git config user.name) <$(git config user.email)>"
 git add .
 if git diff --cached --name-only | grep -E '(^|/)\.env$'; then echo ".env staged - aborting"; exit 1; fi
+if [ -z "$(git diff --cached --name-only | grep -v '^benchmarks/results/')" ]; then
+  echo "Only benchmark timings changed - nothing new to publish. Skipping commit."
+  git reset -q
+  exit 0
+fi
 git commit -m "$MSG"
 
 git remote get-url origin >/dev/null 2>&1 || git remote add origin "$REMOTE"

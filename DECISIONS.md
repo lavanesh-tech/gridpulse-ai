@@ -93,3 +93,26 @@ energy price, so deadlines-first is the default; the choice is the fleet manager
 **Decision:** finished parts are kept; sessions on failed chargers are cut at the failure instant; others run to the
 next boundary; remaining energy is credited (rounded down) and re-planned with the same deterministic scheduler.
 **Why:** Simple, deterministic and validated end to end. **Cost:** up to one slot of charging time can be lost.
+
+## ADR-021: Own pgvector schema + Spring AI only for models
+**Decision:** chunks and vectors live in `knowledge_chunk` (JDBC, `<=>` cosine distance, HNSW index); Spring AI is used
+for `EmbeddingModel`, `ChatModel`/`ChatClient` and `@Tool` calling, not for its vector-store abstraction.
+**Why:** tenant isolation is a WHERE clause we control and test, not a metadata filter we hope is applied; the SQL is
+visible and explainable. **Trade-off:** more code than `PgVectorStore`.
+
+## ADR-022: Offline lexical embedder as default and test double
+**Decision:** without an embedding model, a hashed bag-of-words embedder (1536 dims) is used; each chunk records its
+embedding model and searches only compare vectors from the same model.
+**Why:** the whole RAG pipeline runs and is tested with no key, network or cost. **Limit:** matches words, not meaning
+(measured: it misses paraphrases — see BENCHMARKS.md). Switching models requires re-ingesting documents.
+Its relevance threshold is 0.20, set from measured collision noise (0.10 admitted 14% of off-topic queries).
+
+## ADR-023: Refuse before generating
+**Decision:** if no chunk passes the relevance threshold the model is not called and a fixed "not covered" answer is
+returned; answers whose citations reference no provided source are flagged `grounded=false`.
+**Why:** the cheapest hallucination is the one never generated.
+
+## ADR-024: Filtered vector search on a shared HNSW index
+**Decision:** `SET LOCAL hnsw.ef_search = 200`, plus `hnsw.iterative_scan = relaxed_order` on pgvector ≥ 0.8, then re-sort.
+**Why:** HNSW filters after finding candidates; with many tenants one tenant's chunks could be crowded out.
+**Revisit:** per-tenant partial indexes or partitioning at larger scale.

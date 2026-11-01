@@ -62,6 +62,21 @@ Compute times for this run are in the committed JSON (machine-specific).
 | M4 | Experiments: charger-choice tweaks → no change; **latest-slots-first → +0.4–0.7 points**; cheapest-first → cheaper but fewer deadlines met | Made the objective explicit (deadlines-first default, cost-first optional) |
 | M4 | Optimizer ~8× slower than baseline after adding cost ordering (boxed sort per vehicle×charger) | Precomputed per-grid slot order: 210 → 92 ms at 2,000 vehicles, identical results |
 
+## Retrieval quality (Milestone 5)
+Bundled evaluation: 14 questions over 4 synthetic documents (17 chunks): 10 keyword questions + 4 deliberate paraphrases.
+| Embedder | hit@3 | MRR | Notes |
+|---|---|---|---|
+| offline lexical (`lexical-hash-v1`) | 0.9286 | 0.881 | all 10 keyword questions rank 1; misses "cheapest… overnight" (off-peak), ranks "who gets juice first" 3rd |
+| OpenAI `text-embedding-3-small` | not yet measured | | run `POST /api/v1/advisor/evaluate` with a key configured |
+
+**Relevance threshold (lexical).** Hashing 1536 buckets causes word collisions that give unrelated text a small score.
+Over 5,000 random off-topic queries: 14.0% scored above 0.10, 1.06% above 0.15, 0.12% above 0.20 (max 0.217). All 10
+keyword questions score ≥ 0.243, so the threshold is **0.20**; two paraphrases (0.183, 0.109) are then refused — the honest
+outcome for an embedder that cannot match meaning. Found by `AdvisorIT` failing at the first threshold (0.10).
+
+The lexical numbers were measured offline with the same chunker and embedder (brute-force cosine) and are re-checked
+against pgvector by `AdvisorIT`. Fourteen questions is a smoke test, not a benchmark of semantic quality.
+
 ## Not yet measured (later milestones)
 API p50/p95/p99 latency and DB query timings (M7, k6), concurrent reservation conflict rates under load (M7),
 test coverage (JaCoCo report published in CI, M8).

@@ -19,9 +19,8 @@ Benchmark results in BENCHMARKS.md.
 - Tests: `ApiIT` (auth, RBAC, validation, tenant isolation, full flow), extended `ChargingReservationIT`
   (grid capacity, cross-tenant), `RateLimiterTest`
 
-## Milestone 4 — Optimization + Analytics: written, NOT YET VERIFIED on the author's machine
-Engine changes compiled and checked in the assistant's workspace (JDK 21, javac, harness runs; all 31 scheduling
-files byte-identical to the repo); Spring code and JUnit tests compile only in the full Gradle build.
+## Milestone 4 — Optimization + Analytics: DONE (1a442ba, verified: 73 tests, 0 failures)
+`c0e66ae` only re-recorded benchmark timings from a second run.
 - Tariffs: `TariffRate`/`GridTariff` (local-time bands, wrap midnight), `tariff` module API (GET/PUT), V4 migration (grid time zone)
 - `ScheduleCost` (slot-split pricing in integer micro-units), `PriorityOutcome` per-priority metrics
 - `PrioritySlackScheduler.Objective` DEADLINES_FIRST (default) / COST_FIRST; per-grid precomputed slot order
@@ -33,13 +32,26 @@ files byte-identical to the repo); Spring code and JUnit tests compile only in t
 - Tests: TariffAndCostTest, ExistingBookingsTest, ScheduleRecalculatorTest, TariffValidationTest, SchedulerTest additions,
   ApiIT M4 flow (tariff RBAC/validation, preview around a reservation, recalculation, analytics, history)
 
+## Milestone 5 — Spring AI + RAG: written, NOT YET VERIFIED on the author's machine
+Plain-Java parts (chunker, offline embedder, citations, retrieval metrics, sample corpus) compiled and measured in the
+assistant's workspace and byte-identical in the repo; Spring AI wiring compiles only in the Gradle build.
+- Spring AI 1.0.3 (OpenAI starter), all models `none` by default → app and tests need no key
+- V5: `knowledge_document`, `knowledge_chunk` (vector(1536), HNSW cosine, embedding_model per chunk)
+- Ingestion (chunk → embed → store, SHA-256 dedup), tenant-filtered search, relevance threshold, filtered-HNSW tuning
+- `EnergyAdvisorService.ask` (refuse-before-generate, citation validation), `explainSchedule` (engine facts +
+  algorithm comparison + optional narrative with read-only `AdvisorTools`, capped at 8 calls)
+- Retrieval evaluation (hit@k, MRR) + bundled 14-question set; 4 synthetic sample documents
+- Tests: `TextAndRetrievalUnitTest`, `AdvisorIT` (fake chat model: isolation, refusal, citations, type filter, dedup,
+  tenant-scoped delete, evaluation, tool safety, explanation), ApiIT advisor flow without a key
+
 ## Known issues / limitations
 - Deadlines-first helps urgent vehicles at the expense of priority 0 (by design); cost-first meets fewer deadlines than baseline.
 - Recalculation re-plans from the next slot boundary (up to one slot lost); late failures may be unrecoverable under ALAP.
+- Lexical embedder matches words, not meaning; OpenAI embeddings not yet evaluated (needs key).
 - Rate limiting is per instance (in memory) → Redis in M8.
 - Local ports: Postgres 5433, Redis 6380. App needs GRIDPULSE_JWT_SECRET (>= 32 bytes) to start.
 
 ## Next steps
-1. Author runs the publish script for M4.
-2. Milestone 5: Spring AI Energy Advisor, pgvector RAG (ingestion, chunking, embeddings, tenant-filtered retrieval,
-   citations, retrieval evaluation), controlled tool calling validated by the Java engine. Needs an OpenAI API key.
+1. Author runs the publish script for M5.
+2. Optional: add OPENAI_API_KEY, re-ingest samples, run /advisor/evaluate and record real-embedding results.
+3. Milestone 6: React + TypeScript frontend (Vite, Tailwind, TanStack Query, ECharts).

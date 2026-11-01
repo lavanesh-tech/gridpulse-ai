@@ -7,7 +7,7 @@ after disruptions, and compares optimized schedules against a documented baselin
 > All data is **synthetic**. Benchmark numbers in this repo come only from reproducible runs
 > described in [BENCHMARKS.md](BENCHMARKS.md); none represent real-world business impact.
 
-**Status:** Milestone 4 (Optimization + Analytics) — see [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+**Status:** Milestone 5 (Spring AI + RAG Energy Advisor) — see [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
 ## Results so far (synthetic data, see [BENCHMARKS.md](BENCHMARKS.md))
 Over 40 seeded scenarios (50,000 vehicles), the deadlines-first scheduler meets 97.1% of deadlines vs 96.7% for a
@@ -30,6 +30,16 @@ set -a; source .env; set +a   # export the variables for the app
 ./gradlew bootRun             # app on :8080 -> /swagger-ui.html, /actuator/health
 ./gradlew benchmark          # baseline vs optimized scheduler -> benchmarks/results/
 ```
+
+## Enabling the AI Energy Advisor (optional)
+Everything runs without an AI key: retrieval uses an offline embedder and the advisor returns sources and computed
+facts. To get natural-language answers with OpenAI, add to `.env` (git-ignored) and restart:
+```
+OPENAI_API_KEY=sk-...            # set a monthly spending limit in your OpenAI account
+SPRING_AI_MODEL_CHAT=openai
+SPRING_AI_MODEL_EMBEDDING=openai
+```
+Documents ingested with the offline embedder must be re-ingested after switching (vectors are model-specific).
 
 ## Documentation
 | File | Purpose |
