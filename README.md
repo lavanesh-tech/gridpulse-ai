@@ -39,14 +39,15 @@ npm test                   # Vitest (runs in UTC)
 ```
 
 ## Enabling the AI Energy Advisor (optional)
-Everything runs without an AI key: retrieval uses an offline embedder and the advisor returns sources and computed
-facts. To get natural-language answers with OpenAI, add to `.env` (git-ignored) and restart:
+Everything runs without an AI key: retrieval uses an offline embedder and the advisor returns sources and computed facts.
+To use OpenAI (gpt-4o-mini + text-embedding-3-small):
+```bash
+./scripts/setup-openai.sh      # asks for the key (hidden), checks it, writes .env (git-ignored, chmod 600)
+./scripts/evaluate-openai.sh   # embeds the sample docs with OpenAI, records hit@3 / MRR, asks a sample question
+./scripts/run-local.sh         # run the API with .env settings
 ```
-OPENAI_API_KEY=sk-...            # set a monthly spending limit in your OpenAI account
-SPRING_AI_MODEL_CHAT=openai
-SPRING_AI_MODEL_EMBEDDING=openai
-```
-Documents ingested with the offline embedder must be re-ingested after switching (vectors are model-specific).
+Switching embedding models re-embeds existing documents on the next ingest (vectors are model-specific).
+Set a monthly spending limit in your OpenAI account. Tests never call OpenAI.
 
 ## Documentation
 | File | Purpose |

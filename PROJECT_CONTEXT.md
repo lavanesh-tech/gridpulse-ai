@@ -43,7 +43,7 @@ First run caught the lexical relevance threshold set too low (0.10); raised to 0
 - Tests: `TextAndRetrievalUnitTest`, `AdvisorIT` (fake chat model: isolation, refusal, citations, type filter, dedup,
   tenant-scoped delete, evaluation, tool safety, explanation), ApiIT advisor flow without a key
 
-## Milestone 6 — React Frontend: WRITTEN, awaiting verification on the Mac
+## Milestone 6 — React Frontend: DONE (5e7e24e, verified: 19 frontend tests on the Mac)
 - `frontend/`: React 19 + TypeScript 5.9 + Vite 7 + Tailwind 4 + TanStack Query 5 + ECharts 6 (tree-shaken), react-router 7
 - Pages: sign-in, dashboard (analytics), fleets/vehicles, stations/chargers, planner (night-strip timeline, tariff bands,
   grid load vs capacity, strategy comparison, charger-failure what-if), advisor (cited answers)
@@ -54,11 +54,10 @@ First run caught the lexical relevance threshold set too low (0.10); raised to 0
 ## Known issues / limitations
 - Deadlines-first helps urgent vehicles at the expense of priority 0 (by design); cost-first meets fewer deadlines than baseline.
 - Recalculation re-plans from the next slot boundary (up to one slot lost); late failures may be unrecoverable under ALAP.
-- Lexical embedder matches words, not meaning; OpenAI embeddings not yet evaluated (needs key).
+- Lexical embedder matches words, not meaning. OpenAI embeddings measured: hit@3 1.0, MRR 0.952 (vs lexical 0.929 / 0.881).
 - Rate limiting is per instance (in memory) → Redis in M8.
 - Local ports: Postgres 5433, Redis 6380. App needs GRIDPULSE_JWT_SECRET (>= 32 bytes) to start.
 
 ## Next steps
-1. Optional: add OPENAI_API_KEY, re-ingest samples, run /advisor/evaluate and record real-embedding results.
-2. Verify + publish Milestone 6.
+1. Milestone 6 published (5e7e24e). OpenAI enabled locally via scripts/setup-openai.sh; publish the OpenAI scripts + re-embed fix.
 3. Milestone 7: testing + observability (E2E, k6, Actuator/Micrometer).

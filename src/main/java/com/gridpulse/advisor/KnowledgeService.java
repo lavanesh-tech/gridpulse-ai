@@ -47,20 +47,25 @@ public class KnowledgeService {
         return embeddings.name();
     }
 
-    /** Idempotent: identical content (SHA-256) is stored once per tenant. */
+    /**
+     * Idempotent: identical content (SHA-256) is stored once per tenant. If the document exists but has no vectors
+     * from the current embedding model (the model was switched), its chunks are embedded again for that model.
+     */
     @Transactional
     public IngestResult ingest(UUID tenantId, String actor, String title, String source, DocType type, String content) {
         if (content == null || content.isBlank()) throw new IllegalArgumentException("content must not be empty");
         if (content.length() > MAX_CHARS) throw new IllegalArgumentException("content is limited to " + MAX_CHARS + " characters");
         String sha = sha256(content);
         var existing = store.findBySha(tenantId, sha);
-        if (existing.isPresent()) {
+        if (existing.isPresent() && store.hasChunks(existing.get(), embeddings.name())) {
             return new IngestResult(existing.get(), title, 0, true, embeddings.name());
         }
         List<String> chunks = chunker.chunk(content);
         List<float[]> vectors = embeddings.embed(chunks);
-        UUID id = UUID.randomUUID();
-        store.insertDocument(id, tenantId, title.strip(), source, type, sha, actor);
+        UUID id = existing.orElseGet(UUID::randomUUID);
+        if (existing.isEmpty()) {
+            store.insertDocument(id, tenantId, title.strip(), source, type, sha, actor);
+        }
         for (int i = 0; i < chunks.size(); i++) {
             store.insertChunk(id, tenantId, i, chunks.get(i), embeddings.name(), vectors.get(i));
         }

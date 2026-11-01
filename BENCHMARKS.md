@@ -67,7 +67,7 @@ Bundled evaluation: 14 questions over 4 synthetic documents (17 chunks): 10 keyw
 | Embedder | hit@3 | MRR | Notes |
 |---|---|---|---|
 | offline lexical (`lexical-hash-v1`) | 0.9286 | 0.881 | all 10 keyword questions rank 1; misses "cheapest… overnight" (off-peak), ranks "who gets juice first" 3rd |
-| OpenAI `text-embedding-3-small` | not yet measured | | run `POST /api/v1/advisor/evaluate` with a key configured |
+| OpenAI `text-embedding-3-small` | 1.0 | 0.9524 | all 14 in the top 3, including the off-peak paraphrase; only "who gets juice first" ranks 3rd. Measured 2026-11-01 on the author's Mac via `scripts/evaluate-openai.sh` (raw: `benchmarks/results/retrieval-openai.json`) |
 
 **Relevance threshold (lexical).** Hashing 1536 buckets causes word collisions that give unrelated text a small score.
 Over 5,000 random off-topic queries: 14.0% scored above 0.10, 1.06% above 0.15, 0.12% above 0.20 (max 0.217). All 10

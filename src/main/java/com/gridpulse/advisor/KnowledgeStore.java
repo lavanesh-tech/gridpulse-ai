@@ -49,6 +49,12 @@ public class KnowledgeStore {
                 (rs, i) -> UUID.fromString(rs.getString("id")), tenantId, sha).stream().findFirst();
     }
 
+    boolean hasChunks(UUID documentId, String model) {
+        Integer n = jdbc.queryForObject("SELECT count(*) FROM knowledge_chunk WHERE document_id = ? AND embedding_model = ?",
+                Integer.class, documentId, model);
+        return n != null && n > 0;
+    }
+
     void insertDocument(UUID id, UUID tenantId, String title, String source, DocType type, String sha, String actor) {
         jdbc.update("""
                 INSERT INTO knowledge_document (id, tenant_id, title, source, doc_type, content_sha256, created_by)
