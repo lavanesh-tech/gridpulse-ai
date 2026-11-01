@@ -72,3 +72,24 @@ grid row serialises only reservations on the same grid.
 ## ADR-016: 404 for other tenants' resources
 **Decision:** Cross-tenant ids are reported as not found.
 **Why:** A 403 would confirm that the id exists, leaking information.
+
+## ADR-017: Explicit scheduling objective (deadlines-first default, cost-first optional)
+**Decision:** `PrioritySlackScheduler(Objective)`; DEADLINES_FIRST fills latest slots first, COST_FIRST cheapest first.
+**Why:** Measured over 40 scenarios, the goals conflict: cost-first saves ~52% but misses more deadlines than the
+baseline; deadlines-first beats the baseline on deadlines and still saves ~30%. Fleets usually value departures over
+energy price, so deadlines-first is the default; the choice is the fleet manager's, not hidden in the algorithm.
+**Trade-off:** latest-first leaves less recovery time after late failures (see BENCHMARKS.md).
+
+## ADR-018: Tariffs as local-time bands per grid connection
+**Decision:** `tariff_period` rows (start, end, price) interpreted in `grid_connection.time_zone`; bands may wrap midnight.
+**Why:** Utilities publish time-of-use rates in local time; DST is handled by `java.time` when slots are priced.
+**Not modelled:** demand charges, tiered/seasonal rates, taxes.
+
+## ADR-019: Plan around existing reservations instead of ignoring them
+**Decision:** live sessions enter the problem as `FixedBooking`s that pre-occupy chargers, vehicles and grid load.
+**Why:** A preview that ignores bookings could propose a plan that the reservation endpoint would then reject.
+
+## ADR-020: Recalculation keeps history and re-plans from the next slot boundary
+**Decision:** finished parts are kept; sessions on failed chargers are cut at the failure instant; others run to the
+next boundary; remaining energy is credited (rounded down) and re-planned with the same deterministic scheduler.
+**Why:** Simple, deterministic and validated end to end. **Cost:** up to one slot of charging time can be lost.

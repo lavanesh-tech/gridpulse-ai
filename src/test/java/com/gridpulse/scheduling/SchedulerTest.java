@@ -107,6 +107,26 @@ class SchedulerTest {
     }
 
     @Test
+    void metricsBreakDeadlinesDownByPriority() {
+        SchedulingProblem p = sharedGrid();
+        ScheduleMetrics m = ScheduleMetrics.of(p, baseline.schedule(p), List.of());
+        assertThat(m.byPriority()).singleElement().satisfies(o -> {
+            assertThat(o.priority()).isZero();
+            assertThat(o.needingCharge()).isEqualTo(2);
+            assertThat(o.met()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void costObjectiveIsAlsoValidOnGeneratedScenarios() {
+        PrioritySlackScheduler cost = new PrioritySlackScheduler(PrioritySlackScheduler.Objective.COST_FIRST);
+        for (long seed = 1; seed <= 5; seed++) {
+            SchedulingProblem p = SyntheticScenarioGenerator.generate(seed, 300, 4, 15);
+            assertThat(validator.validate(p, cost.schedule(p))).as("seed %d", seed).isEmpty();
+        }
+    }
+
+    @Test
     void sameSeedProducesSameSchedule() {
         SchedulingProblem a = SyntheticScenarioGenerator.generate(7, 200, 3, 10);
         SchedulingProblem b = SyntheticScenarioGenerator.generate(7, 200, 3, 10);

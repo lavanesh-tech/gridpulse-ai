@@ -65,6 +65,22 @@ public final class ScheduleValidator {
             events.add(new GridEvent(s.window().end(), -w));
         }
 
+        // Capacity already committed outside this schedule counts towards overlaps and grid load.
+        for (FixedBooking b : p.fixedBookings()) {
+            ChargerSpec c = chargers.get(b.chargerId());
+            if (c == null) continue;
+            ScheduledSession existing = new ScheduledSession(
+                    b.vehicleId() == null ? "<existing booking>" : b.vehicleId(), b.chargerId(), b.window(), b.power());
+            byCharger.computeIfAbsent(b.chargerId(), k -> new ArrayList<>()).add(existing);
+            if (b.vehicleId() != null) {
+                byVehicle.computeIfAbsent(b.vehicleId(), k -> new ArrayList<>()).add(existing);
+            }
+            long w = Units.watts(b.power());
+            List<GridEvent> events = gridEvents.computeIfAbsent(c.gridId(), k -> new ArrayList<>());
+            events.add(new GridEvent(b.window().start(), w));
+            events.add(new GridEvent(b.window().end(), -w));
+        }
+
         checkOverlaps(byCharger, ViolationType.CHARGER_DOUBLE_BOOKED, violations);
         checkOverlaps(byVehicle, ViolationType.VEHICLE_ON_MULTIPLE_CHARGERS, violations);
         checkGridCapacity(gridEvents, gridCapacity, violations);

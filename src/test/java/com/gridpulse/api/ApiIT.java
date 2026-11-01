@@ -78,6 +78,12 @@ class ApiIT extends PostgresIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)));
     }
 
+    private ResultActions putJson(String url, String token, Object body) throws Exception {
+        return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(url)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)));
+    }
+
     private String id(ResultActions r) throws Exception {
         return JsonPath.read(r.andReturn().getResponse().getContentAsString(), "$.id");
     }
@@ -166,6 +172,61 @@ class ApiIT extends PostgresIntegrationTest {
                 .andExpect(jsonPath("$.violations", hasSize(0)))
                 .andExpect(jsonPath("$.schedule.unmet", hasSize(0)))
                 .andExpect(jsonPath("$.metrics.deadlinesMet").value(1));
+
+        // --- Milestone 4: tariffs, cost, existing reservations, disruption what-if, analytics, history ---
+        postJson("/api/v1/grid-connections/" + grid + "/tariff", admin, Map.of()).andExpect(status().isMethodNotAllowed());
+        List<Map<String, Object>> bands = List.of(
+                Map.of("start", "00:00", "end", "06:00", "pricePerKwh", 0.10),
+                Map.of("start", "06:00", "end", "00:00", "pricePerKwh", 0.30));
+        putJson("/api/v1/grid-connections/" + grid + "/tariff", manager, Map.of("bands", bands)).andExpect(status().isForbidden());
+        putJson("/api/v1/grid-connections/" + grid + "/tariff", admin, Map.of("bands", List.of(
+                Map.of("start", "00:00", "end", "07:00", "pricePerKwh", 0.10),
+                Map.of("start", "06:00", "end", "00:00", "pricePerKwh", 0.30)))).andExpect(status().isBadRequest());
+        putJson("/api/v1/grid-connections/" + grid + "/tariff", admin, Map.of("bands", bands)).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/grid-connections/" + grid + "/tariff").header("Authorization", "Bearer " + operator))
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(2)));
+
+        // Horizon overlaps the CCS vehicle's own 22:00-23:00 reservation: the plan must avoid that hour.
+        Map<String, Object> overlappingPlan = Map.of(
+                "horizonStart", "2026-01-05T22:00:00Z", "slotMinutes", 15, "slotCount", 16, "algorithm", "PRIORITY_SLACK_COST",
+                "vehicles", List.of(Map.of("vehicleId", ccs, "targetSocPct", 40,
+                        "arrival", "2026-01-05T22:00:00Z", "departure", "2026-01-06T02:00:00Z", "priority", 0)));
+        postJson("/api/v1/schedules/preview", manager, overlappingPlan)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.existingBookingsConsidered").value(1))
+                .andExpect(jsonPath("$.violations", hasSize(0)))
+                .andExpect(jsonPath("$.schedule.unmet", hasSize(0)))
+                .andExpect(jsonPath("$.metrics.cost.totalCost").exists())
+                .andExpect(jsonPath("$.gridProfiles", hasSize(1)))
+                .andExpect(jsonPath("$.schedule.sessions[*].window.start", org.hamcrest.Matchers.everyItem(
+                        org.hamcrest.Matchers.greaterThanOrEqualTo("2026-01-05T23:00:00Z"))));
+
+        postJson("/api/v1/schedules/recalculate", manager, Map.of(
+                "plan", Map.of("horizonStart", "2026-01-06T00:00:00Z", "slotMinutes", 15, "slotCount", 32, "algorithm", "PRIORITY_SLACK",
+                        "vehicles", List.of(Map.of("vehicleId", ccs, "targetSocPct", 80,
+                                "arrival", "2026-01-06T00:00:00Z", "departure", "2026-01-06T06:00:00Z", "priority", 1))),
+                "disruption", Map.of("at", "2026-01-06T01:00:00Z", "chargersOutOfService", List.of(charger))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.violations", hasSize(0)))
+                .andExpect(jsonPath("$.result.schedule.unmet[0].reason").value("NO_COMPATIBLE_CHARGER"))
+                .andExpect(jsonPath("$.result.newlyUnmetVehicles", hasSize(1)));
+        postJson("/api/v1/schedules/recalculate", manager, Map.of(
+                "plan", overlappingPlan,
+                "disruption", Map.of("at", "2026-01-05T23:00:00Z", "chargersOutOfService", List.of(UUID.randomUUID()))))
+                .andExpect(status().isNotFound());
+
+        mvc.perform(get("/api/v1/analytics/summary").param("from", "2026-01-05T00:00:00Z").param("to", "2026-01-07T00:00:00Z")
+                        .header("Authorization", "Bearer " + operator))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionsByStatus.RESERVED").value(1))
+                .andExpect(jsonPath("$.scheduledEnergyKwh").value(100.0))
+                .andExpect(jsonPath("$.vehiclesServed").value(1))
+                .andExpect(jsonPath("$.chargers", hasSize(1)));
+        mvc.perform(get("/api/v1/sessions/history").param("from", "2026-01-05T00:00:00Z").param("to", "2026-01-07T00:00:00Z")
+                        .header("Authorization", "Bearer " + operator))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalItems").value(1))
+                .andExpect(jsonPath("$.items[0].status").value("RESERVED"));
 
         Integer audits = jdbc.queryForObject("SELECT count(*) FROM audit_event WHERE tenant_id = ? AND action = 'RESERVE_SESSION'",
                 Integer.class, tenantA);

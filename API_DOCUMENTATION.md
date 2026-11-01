@@ -31,7 +31,13 @@ JWT claims: `sub` (username), `tenant_id`, `roles` (one of ADMIN, FLEET_MANAGER,
 | GET | `/api/v1/sessions?chargerId=` | any |
 | POST | `/api/v1/sessions/{id}/cancel` | ADMIN, FLEET_MANAGER, OPERATOR |
 | POST | `/api/v1/sessions/{id}/start`, `/complete`, `/interrupt` | ADMIN, OPERATOR |
+| GET | `/api/v1/grid-connections/{id}` | any |
+| GET | `/api/v1/grid-connections/{id}/tariff` | any |
+| PUT | `/api/v1/grid-connections/{id}/tariff` | ADMIN |
 | POST | `/api/v1/schedules/preview` | ADMIN, FLEET_MANAGER, OPERATOR |
+| POST | `/api/v1/schedules/recalculate` | ADMIN, FLEET_MANAGER, OPERATOR |
+| GET | `/api/v1/sessions/history?from=&to=&page=&size=` | any |
+| GET | `/api/v1/analytics/summary?from=&to=` | any |
 | GET | `/api/v1/audit-events?limit=` | ADMIN |
 
 ## Status codes
@@ -59,5 +65,34 @@ curl -s localhost:8080/api/v1/fleets -H "Authorization: Bearer $TOKEN"
   "vehicles": [ { "vehicleId": "…", "targetSocPct": 80, "arrival": "2026-01-06T00:00:00Z",
                   "departure": "2026-01-06T06:00:00Z", "priority": 1 } ] }
 ```
-Returns `schedule` (sessions + unmet with reasons), `violations` (must be empty) and `metrics`. It books nothing.
-Limitation: the preview does not yet subtract capacity already held by existing reservations (Milestone 4).
+`algorithm`: `BASELINE`, `PRIORITY_SLACK` (deadlines first, recommended) or `PRIORITY_SLACK_COST` (cheapest slots first).
+
+Returns `schedule` (sessions + unmet with reasons), `violations` (must be empty), `metrics` (deadlines overall and
+`byPriority`, utilization, energy, `cost`), `gridProfiles` (load per slot, peak, utilization, bottleneck slots) and
+`existingBookingsConsidered`. Live reservations (RESERVED/ACTIVE) in the horizon are planned around. Nothing is booked.
+
+## Tariffs
+`PUT /api/v1/grid-connections/{id}/tariff` replaces the grid's time-of-use bands (local time of the grid's `timeZone`):
+```json
+{ "bands": [ { "start": "21:00", "end": "06:00", "pricePerKwh": 0.11 },
+             { "start": "06:00", "end": "16:00", "pricePerKwh": 0.18 },
+             { "start": "16:00", "end": "21:00", "pricePerKwh": 0.32 } ] }
+```
+Bands are `[start, end)`, may wrap midnight, must not overlap, price 0–10 with at most 5 decimals. Uncovered time is
+priced 0. Create a grid with `"timeZone": "America/New_York"` (IANA id; default UTC).
+
+## Disruption what-if
+`POST /api/v1/schedules/recalculate`
+```json
+{ "plan": { …same as preview… },
+  "disruption": { "at": "2026-01-06T01:00:00Z", "chargersOutOfService": ["<charger id>"],
+                  "gridCapacityKw": { "<grid id>": 120 } } }
+```
+Plans, applies the outage/curtailment from `at`, and re-plans the rest. Response: `before` (the original preview),
+`result` (combined schedule, `sessionsKept`, `sessionsInterrupted`, `sessionsReplanned`, `newlyUnmetVehicles`,
+`violations`), `metricsAfter`, `gridProfilesAfter`.
+
+## Analytics and history
+- `GET /api/v1/analytics/summary?from=…&to=…` — sessions by status, scheduled energy (kWh, clipped to the range,
+  excluding cancelled), distinct vehicles, per-charger sessions/occupied hours/utilization. Range ≤ 366 days.
+- `GET /api/v1/sessions/history?from=…&to=…&page=0&size=50` — sessions overlapping the range, newest first, paged (size ≤ 200).

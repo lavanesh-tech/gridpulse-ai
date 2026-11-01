@@ -8,6 +8,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
 import java.math.BigDecimal;
+import java.time.ZoneId;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -22,6 +23,8 @@ public class GridConnection {
     private String name;
     @Column(name = "capacity_limit_kw", nullable = false, precision = 10, scale = 3)
     private BigDecimal capacityLimitKw;
+    @Column(name = "time_zone", nullable = false)
+    private String timeZone;
     @Version
     private Long version;
 
@@ -29,6 +32,11 @@ public class GridConnection {
     }
 
     public GridConnection(UUID tenantId, String name, PowerKw capacityLimit) {
+        this(tenantId, name, capacityLimit, ZoneId.of("UTC"));
+    }
+
+    public GridConnection(UUID tenantId, String name, PowerKw capacityLimit, ZoneId timeZone) {
+        this.timeZone = Objects.requireNonNull(timeZone, "timeZone").getId();
         this.id = UUID.randomUUID();
         this.tenantId = Objects.requireNonNull(tenantId, "tenantId");
         if (name == null || name.isBlank()) throw new IllegalArgumentException("name required");
@@ -45,4 +53,5 @@ public class GridConnection {
     public UUID getTenantId() { return tenantId; }
     public String getName() { return name; }
     public PowerKw getCapacityLimit() { return new PowerKw(capacityLimitKw); }
+    public ZoneId getTimeZone() { return ZoneId.of(timeZone); }
 }

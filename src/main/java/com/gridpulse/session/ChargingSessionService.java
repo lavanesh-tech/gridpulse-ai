@@ -13,12 +13,15 @@ import com.gridpulse.station.ChargingStationRepository;
 import com.gridpulse.vehicle.Vehicle;
 import com.gridpulse.vehicle.VehicleRepository;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -103,6 +106,13 @@ public class ChargingSessionService {
                 Map.of("vehicleId", vehicleId.toString(), "chargerId", chargerId.toString(),
                         "start", window.start().toString(), "end", window.end().toString()));
         return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ChargingSession> history(UUID tenantId, Instant from, Instant to, int page, int size) {
+        if (!to.isAfter(from)) throw new IllegalArgumentException("'to' must be after 'from'");
+        return sessions.findByTenantIdAndStartsAtLessThanAndEndsAtGreaterThanOrderByStartsAtDesc(
+                tenantId, to, from, PageRequest.of(page, size));
     }
 
     @Transactional(readOnly = true)

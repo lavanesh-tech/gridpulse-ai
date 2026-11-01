@@ -181,3 +181,47 @@ conflict) suits rare conflicts — the project uses both, each where it fits.
 | Insert-only audit rows | `JdbcTemplate` | One SQL statement; no entity needed |
 | Schedule preview read model (join of chargers, stations, grids) | `JdbcTemplate` | One query, exactly the columns needed |
 | `FOR UPDATE` lock + aggregate | `JdbcTemplate` | Explicit SQL is clearer than JPQL lock hints |
+
+---
+
+# Milestone 4 concepts
+
+## 25. Optimization means choosing an objective
+"Optimize" is meaningless until you say *for what*. Here two objectives conflict: meeting departures and paying less.
+Cheap hours are the same for everyone, so if every vehicle chases them they collide and some miss departure.
+The project makes the objective an explicit parameter and measures both, instead of picking one and claiming victory.
+
+## 26. Greedy heuristics and why "latest first" helped
+The scheduler is greedy: it plans one vehicle at a time and never revisits. Order matters. Most vehicles arrive in
+the first hours, so early slots are the scarce ones. If flexible vehicles grab them, tight vehicles arriving a bit
+later find nothing. Scheduling *as late as possible* (ALAP) leaves early capacity to whoever needs it. ALAP's risk:
+no buffer if something fails late. Every heuristic has a failure mode — know it and test it.
+
+## 27. Measure, don't guess
+The M2 optimizer *looked* smart and lost to the baseline. M4 changed one thing at a time (charger choice, slot order,
+cost order, fallback), ran each across 40 seeded scenarios, and kept only what moved the numbers. Two ideas did
+nothing and were dropped. Write down what didn't work (BENCHMARKS.md "History") — interviewers love that.
+
+## 28. Time zones and tariffs
+Store instants in UTC (`Instant`, `TIMESTAMPTZ`); convert to local time only to apply local rules like tariffs.
+A band 21:00–06:00 *wraps midnight*: `covers(t) = t ≥ start OR t < end`. `ZonedDateTime` handles daylight saving.
+
+## 29. Money arithmetic
+Prices are converted to integer micro-units (0.11 → 110,000) and multiplied exactly; rounding happens once, at the
+end. Never use `double` for money.
+
+## 30. Profiling a slowdown
+Cost ordering made the optimizer 8× slower than baseline. Cause: building and sorting a boxed `List<Integer>` for every
+vehicle × charger pair (millions of allocations). Fix: the cheapest-first order is the same for every vehicle on a grid,
+so compute it once and *filter* per vehicle. Same output, 2.3× faster. General lesson: hoist work that doesn't depend
+on the loop variable out of the loop.
+
+## 31. Re-planning after a disruption
+Real operations change mid-night: a station fails, the utility curtails power. The recalculator freezes the past,
+credits energy already delivered, and re-runs the same deterministic scheduler on what's left — then validates the
+combined result. Re-using one well-tested engine is safer than writing a separate "repair" algorithm.
+
+## 32. Analytics in SQL
+Aggregates (count by status, energy = power × duration clipped to a date range, utilization per charger) are computed
+in PostgreSQL with `GROUP BY`, `LEAST/GREATEST` and `EXTRACT(EPOCH …)`. Pushing aggregation to the database moves a
+few rows over the network instead of every session.

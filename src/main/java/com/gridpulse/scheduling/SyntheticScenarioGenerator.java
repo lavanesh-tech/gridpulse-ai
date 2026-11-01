@@ -5,8 +5,11 @@ import com.gridpulse.shared.domain.EnergyKwh;
 import com.gridpulse.shared.domain.PowerKw;
 import com.gridpulse.shared.domain.StateOfCharge;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -18,6 +21,9 @@ import java.util.Random;
  *   <li>Horizon: 16 h in 15-minute slots.</li>
  *   <li>Each grid connection is capped at 55% of its chargers' combined rating, so capacity really binds.</li>
  *   <li>About 5% of chargers are out of service (outage simulation).</li>
+ *   <li>Every grid uses the same invented three-band time-of-use tariff in America/New_York:
+ *       peak 16:00–21:00 at 0.32, off-peak 21:00–06:00 at 0.11, shoulder 06:00–16:00 at 0.18 per kWh.
+ *       The tariff consumes no random numbers, so vehicles and chargers match earlier milestones' data.</li>
  * </ul>
  */
 public final class SyntheticScenarioGenerator {
@@ -25,6 +31,11 @@ public final class SyntheticScenarioGenerator {
     public static final int SLOT_MINUTES = 15;
     public static final int SLOT_COUNT = 64;
     public static final int GRID_CAPACITY_PERCENT = 55;
+    public static final ZoneId TARIFF_ZONE = ZoneId.of("America/New_York");
+    public static final List<TariffRate> SYNTHETIC_TOU = List.of(
+            new TariffRate(LocalTime.of(16, 0), LocalTime.of(21, 0), new BigDecimal("0.32")),
+            new TariffRate(LocalTime.of(21, 0), LocalTime.of(6, 0), new BigDecimal("0.11")),
+            new TariffRate(LocalTime.of(6, 0), LocalTime.of(16, 0), new BigDecimal("0.18")));
 
     private SyntheticScenarioGenerator() {
     }
@@ -86,6 +97,11 @@ public final class SyntheticScenarioGenerator {
             requests.add(new ChargingRequest("veh-%05d".formatted(v), type, EnergyKwh.of(batteryKwh),
                     new StateOfCharge(soc), new StateOfCharge(target), PowerKw.of(rateKw), arrival, departure, priority));
         }
-        return new SchedulingProblem(requests, chargers, grids, HORIZON_START, SLOT_MINUTES, SLOT_COUNT);
+        List<GridTariff> tariffs = new ArrayList<>();
+        for (GridLimit g : grids) {
+            tariffs.add(new GridTariff(g.gridId(), TARIFF_ZONE, SYNTHETIC_TOU));
+        }
+        return new SchedulingProblem(requests, chargers, grids, HORIZON_START, SLOT_MINUTES, SLOT_COUNT,
+                tariffs, List.of());
     }
 }

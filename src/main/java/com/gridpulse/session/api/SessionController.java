@@ -8,10 +8,13 @@ import com.gridpulse.shared.domain.PowerKw;
 import com.gridpulse.shared.domain.TimeWindow;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -60,6 +63,18 @@ public class SessionController {
         CurrentUser u = CurrentUser.get();
         return SessionResponse.of(service.reserve(u.tenantId(), u.username(), r.vehicleId(), r.chargerId(),
                 new TimeWindow(r.startsAt(), r.endsAt()), new PowerKw(r.powerKw())));
+    }
+
+    public record HistoryPage(List<SessionResponse> items, int page, int size, long totalItems, int totalPages) {
+    }
+
+    @GetMapping("/history")
+    public HistoryPage history(@RequestParam Instant from, @RequestParam Instant to,
+                               @RequestParam(defaultValue = "0") @Min(0) int page,
+                               @RequestParam(defaultValue = "50") @Min(1) @Max(200) int size) {
+        Page<ChargingSession> p = service.history(CurrentUser.get().tenantId(), from, to, page, size);
+        return new HistoryPage(p.getContent().stream().map(SessionResponse::of).toList(), p.getNumber(), p.getSize(),
+                p.getTotalElements(), p.getTotalPages());
     }
 
     @GetMapping

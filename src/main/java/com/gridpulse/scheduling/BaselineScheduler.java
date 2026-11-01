@@ -51,7 +51,8 @@ public final class BaselineScheduler implements ChargingScheduler {
             for (int s = first; s < end; s++) {
                 for (ChargerSpec c : compatible) {
                     long w = Math.min(Units.watts(c.maxPower()), vehicleWatts);
-                    if (ledger.chargerFree(c.chargerId(), s) && ledger.headroomWatts(c.gridId(), s) >= w) {
+                    if (ledger.chargerFree(c.chargerId(), s) && ledger.vehicleFree(r.vehicleId(), s)
+                            && ledger.headroomWatts(c.gridId(), s) >= w) {
                         chosen = c;
                         startSlot = s;
                         fullWatts = w;
@@ -68,7 +69,8 @@ public final class BaselineScheduler implements ChargingScheduler {
             long delivered = 0;
             for (int s = startSlot; s < end && delivered < need; s++) {
                 long w = Math.min(fullWatts, Allocations.wattsToFinish(need - delivered, p.slotMinutes()));
-                if (!ledger.chargerFree(chosen.chargerId(), s) || ledger.headroomWatts(chosen.gridId(), s) < w) {
+                if (!ledger.chargerFree(chosen.chargerId(), s) || !ledger.vehicleFree(r.vehicleId(), s)
+                        || ledger.headroomWatts(chosen.gridId(), s) < w) {
                     break;
                 }
                 ledger.allocate(chosen, r.vehicleId(), s, w);
