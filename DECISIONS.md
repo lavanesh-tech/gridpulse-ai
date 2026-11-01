@@ -34,3 +34,22 @@
 **Decision:** Override Spring Boot's managed Testcontainers version to 1.21.4.
 **Why:** Docker Desktop 29+ rejects the API version used by 1.21.3 (HTTP 400, "Could not find a valid Docker environment").
 **Revisit:** Remove once the Spring Boot BOM ships 1.21.4 or later.
+
+## ADR-009: Discrete 15-minute slots
+**Decision:** The scheduler plans in fixed slots with constant power per slot.
+**Why:** Turns continuous scheduling into array bookkeeping (fast, exact, easy to validate); matches how utilities bill demand.
+**Trade-off:** A vehicle arriving mid-slot waits for the next slot boundary.
+
+## ADR-010: Integer watts and watt-minutes inside the engine
+**Decision:** Convert kW/kWh `BigDecimal` value objects to `long` watts / watt-minutes at the engine boundary.
+**Why:** Exact (no floating-point drift on capacity checks) and much faster than `BigDecimal` in inner loops.
+
+## ADR-011: Priority + least-slack ordering
+**Decision:** Optimized scheduler orders by priority, then slack (time available − time needed), using a `PriorityQueue`.
+**Why:** Least-slack-first is a classic deadline heuristic; serving tight vehicles first avoids the baseline's
+failure where an early, flexible vehicle consumes capacity a tight one needed. It is a greedy heuristic, not
+a proven optimum; an exact solver (MILP) is out of scope.
+
+## ADR-012: Database exclusion constraints for reservations
+**Decision:** `EXCLUDE USING gist (charger_id WITH =, tstzrange(...) WITH &&)` plus the same for vehicles.
+**Why:** Application-level "check then insert" has a race window; the database constraint is atomic.

@@ -42,6 +42,18 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+springBoot {
+    mainClass = 'com.gridpulse.GridPulseApplication'
+}
+
+tasks.register('benchmark', JavaExec) {
+    group = 'verification'
+    description = 'Runs the seeded baseline-vs-optimized scheduling benchmark'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.gridpulse.analytics.SchedulingBenchmark'
+    args = ['benchmarks/results']
+}
+
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport

@@ -43,3 +43,21 @@ optimistic locking. Redis (from M3/M4) for rate limiting and caching.
 LLM ──proposes──▶ advisor ──calls──▶ scheduling.validate(...) ──▶ accept / reject with reasons
 ```
 The LLM never receives SQL access, secrets, or other tenants' documents.
+
+## Scheduling engine (Milestone 2)
+`scheduling` is plain Java with no Spring or JPA, so it is fast to test and benchmark.
+```
+SchedulingProblem ──▶ ChargingScheduler (Baseline | PrioritySlack) ──▶ ChargingSchedule
+                                                                          │
+                                         ScheduleValidator (independent) ◀┘ ──▶ List<Violation>
+```
+- Time is split into 15-minute slots. A `CapacityLedger` tracks watts used per grid per slot and which
+  vehicle occupies each charger per slot, and refuses any allocation that breaks a hard constraint.
+- `ScheduleValidator` re-checks every hard constraint without trusting the scheduler (sweep line for grid
+  load, sort-and-scan for overlaps). The AI advisor's proposals will go through the same validator.
+
+## Double-booking defence in depth
+1. Scheduler ledger (in memory).
+2. Validator (any schedule, any source).
+3. PostgreSQL exclusion constraints on `charging_session` (charger and vehicle, live statuses only), which
+   hold even when two requests race on different app instances.

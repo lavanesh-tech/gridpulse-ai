@@ -7,20 +7,21 @@ after disruptions, and compares optimized schedules against a documented baselin
 > All data is **synthetic**. Benchmark numbers in this repo come only from reproducible runs
 > described in [BENCHMARKS.md](BENCHMARKS.md); none represent real-world business impact.
 
-**Status:** Milestone 1 (Foundation + Database) — see [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+**Status:** Milestone 2 (Fleet Management + Charging Engine) — see [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
 ## Stack
 Java 21 · Spring Boot 3.5 · Spring Modulith · PostgreSQL 16 + pgvector · Redis · Flyway · Gradle ·
 Testcontainers. Later milestones add Spring Security/OAuth2, Spring AI, React + TypeScript, and AWS.
 
 ## Run locally
-Prerequisites: JDK 21, Docker Desktop, Gradle (only to generate the wrapper once).
+Prerequisites: JDK 21 and Docker Desktop. Local ports: Postgres 5433, Redis 6380.
 
 ```bash
 cp .env.example .env
 ./scripts/verify.sh          # builds, runs all tests, smoke-tests Docker Compose
 docker compose up -d         # Postgres (pgvector) + Redis
 ./gradlew bootRun            # app on :8080, health at /actuator/health
+./gradlew benchmark          # baseline vs optimized scheduler -> benchmarks/results/
 ```
 
 ## Documentation

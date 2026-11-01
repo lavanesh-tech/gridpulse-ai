@@ -68,3 +68,59 @@ You make every commit yourself. Small, meaningful commits per milestone:
 
 *Sections for Collections/DSA, scheduling algorithms, JPA vs JDBC, security, concurrency, Spring AI,
 RAG, React, CI/CD, Terraform and AWS are added in the milestones that introduce them.*
+
+---
+
+# Milestone 2 concepts
+
+## 9. Collections and DSA in the scheduler
+| Structure | Where | Why |
+|---|---|---|
+| `PriorityQueue<ChargingRequest>` | `PrioritySlackScheduler` | Always take the most urgent vehicle next in O(log n). Ordering is a chained `Comparator`: priority ↓, slack ↑, departure ↑, id. |
+| `HashMap<String, long[]>` | `CapacityLedger` | O(1) lookup of a grid's per-slot load array. |
+| `long[]` / `String[]` per slot | `CapacityLedger` | Dense arrays: slot index → load or occupant. Fast and cache-friendly. |
+| `HashSet` | `SchedulingProblem`, `ScheduleMetrics` | Detect duplicate ids; count unmet vehicles. |
+| Sorting + scan | `ScheduleValidator.checkOverlaps` | Sort sessions by start; any start before the latest end seen so far is an overlap. O(n log n) — the "meeting rooms" interview problem. |
+| Sweep line | `ScheduleValidator.checkGridCapacity` | Turn each session into +power at start, −power at end; sort; running sum = load at each instant. |
+
+## 10. Scheduling algorithms
+- **Greedy:** make the best local choice for one vehicle, commit, move on. Fast and explainable; not guaranteed optimal.
+- **Baseline (FCFS):** whoever arrives first takes full power. Simple, but an early vehicle with a late departure
+  can block a later vehicle with a tight deadline. `SchedulerTest.baselineMisses...` shows this exact case.
+- **Slack** = time plugged in − time needed at full rate. Zero slack means "must charge continuously at full power".
+  Least-slack-first is related to Earliest-Deadline-First (EDF) from real-time operating systems.
+- **Power modulation:** the optimized scheduler can charge at 40 kW when only 40 kW of grid headroom remains,
+  instead of waiting for 100 kW to free up.
+- **Determinism:** ties are broken by id so the same input always gives the same output — essential for testing,
+  benchmarking and auditing.
+- **Complexity:** O(V log V + V·C·S). For 2,000 vehicles × ~150 compatible chargers × 64 slots that is ~19M cheap steps.
+
+## 11. Why integers inside the engine
+`0.1 + 0.2 != 0.3` in `double`. Capacity checks must be exact, so the engine converts kW to `long` watts and kWh to
+watt-minutes (1 kWh = 60,000 Wmin). `BigDecimal` stays at the API/database boundary where readability matters.
+
+## 12. JPA, Hibernate and entities
+- **JPA** is the Java standard API for mapping objects to tables; **Hibernate** is the implementation;
+  **Spring Data JPA** generates repository implementations from interfaces (`findByTenantId` becomes SQL).
+- Entities have a `protected` no-arg constructor (Hibernate needs it) and a public constructor that validates
+  input, so invalid entities cannot be created in code.
+- Modules reference each other **by id** (`UUID fleetId`), not by `@ManyToOne` objects. That keeps module
+  boundaries clean and avoids accidental lazy-loading across modules.
+- `@Version Long version` = optimistic locking. `null` also tells Spring Data the entity is new (INSERT, not merge).
+
+## 13. Concurrency: why the database enforces no double-booking
+Naive code: `if (!isBooked(charger, window)) save(...)`. Two requests can both pass the check before either
+saves (a **race condition**). Fix: PostgreSQL **exclusion constraint**
+`EXCLUDE USING gist (charger_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&)`, meaning "no two rows
+with the same charger may have overlapping time ranges". The database checks atomically, so one insert wins and
+the other fails with SQLState 23P01, which Spring translates to `DataIntegrityViolationException`, which we turn
+into `ReservationConflictException`. `ChargingReservationIT` fires two threads at once to prove it.
+
+## 14. State machines
+`ChargingSession` only allows legal transitions (RESERVED→ACTIVE→COMPLETED, ACTIVE→INTERRUPTED, RESERVED→CANCELLED).
+Illegal ones throw `IllegalStateException`. Only live statuses (RESERVED, ACTIVE) block the charger, so a cancelled
+reservation frees the slot.
+
+## 15. Benchmarking honestly
+Seeded data (reproducible), warm-up runs (JIT compilation), several measured runs (median and p95), the same input for
+both algorithms, every schedule validated, environment recorded. Never quote a number that isn't in the results file.

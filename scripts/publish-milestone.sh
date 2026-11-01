@@ -11,6 +11,9 @@ bash scripts/verify.sh 2>&1 | tee build-verify.log
 grep -q "ALL CHECKS PASSED" build-verify.log || { echo "Verification failed - nothing committed."; exit 1; }
 rm -f build-verify.log
 
+echo "== Benchmark (seeded synthetic data) =="
+./gradlew -q benchmark
+
 [ -d .git ] || git init -b main
 echo "Committing as: $(git config user.name) <$(git config user.email)>"
 git add .

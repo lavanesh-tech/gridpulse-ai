@@ -1,0 +1,4 @@
+package com.gridpulse.session;
+
+/** RESERVED → ACTIVE → COMPLETED; ACTIVE → INTERRUPTED; RESERVED → CANCELLED. */
+public enum SessionStatus { RESERVED, ACTIVE, COMPLETED, INTERRUPTED, CANCELLED }
