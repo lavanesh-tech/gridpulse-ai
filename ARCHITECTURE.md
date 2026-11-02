@@ -133,3 +133,11 @@ AI assistant (Claude Desktop) --stdio JSON-RPC--> mcp-server --HTTPS + JWT--> Gr
 The MCP server holds no data and no privileges of its own: it is an API client signed in as a GridPulse user, so tenant
 isolation, roles and rate limits are enforced by the same code as for the web console. Tools are read-only (planning
 uses the preview endpoint) and return compact summaries instead of raw schedules.
+
+## Delivery (Milestone 9)
+```
+git push -> GitHub Actions: backend tests | frontend tests -> E2E (real stack) + Docker image builds
+docker compose --profile app: web (nginx :3000) -> api (:8080) -> postgres, kafka -> notification (:8081)
+```
+Images are built by one multi-stage Dockerfile (JDK to compile, JRE to run, non-root user). The web image serves the
+static build and reverse-proxies `/api`, so the browser sees a single origin in containers exactly as in development.

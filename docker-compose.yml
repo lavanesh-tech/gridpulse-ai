@@ -14,17 +14,19 @@ services:
   redis:
     image: redis:7-alpine
     ports: ["${REDIS_PORT:-6380}:6379"]
-  # Single-node Kafka in KRaft mode (no ZooKeeper). Reachable from your Mac at localhost:9094.
+  # Single-node Kafka in KRaft mode (no ZooKeeper). Two listeners: containers use kafka:9092,
+  # programs on your Mac use localhost:9094.
   kafka:
     image: apache/kafka:3.9.1
     ports: ["9094:9094"]
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9094,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9094
+      KAFKA_LISTENERS: INTERNAL://:9092,EXTERNAL://:9094,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
@@ -34,5 +36,56 @@ services:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9094 >/dev/null 2>&1"]
       interval: 5s
       retries: 20
+
+  # ---- The application itself: `docker compose --profile app up -d --build` (see scripts/stack.sh) ----
+  api:
+    profiles: [app]
+    build: { context: ., target: api }
+    image: gridpulse/api:local
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-gridpulse}
+      POSTGRES_USER: ${POSTGRES_USER:-gridpulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-locally}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GRIDPULSE_EVENTS_KAFKA_ENABLED: "true"
+      GRIDPULSE_JWT_SECRET: ${GRIDPULSE_JWT_SECRET:-}
+      GRIDPULSE_ADMIN_PASSWORD: ${GRIDPULSE_ADMIN_PASSWORD:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SPRING_AI_MODEL_CHAT: ${SPRING_AI_MODEL_CHAT:-none}
+      SPRING_AI_MODEL_EMBEDDING: ${SPRING_AI_MODEL_EMBEDDING:-none}
+    ports: ["${API_PORT:-8080}:8080"]
+    restart: unless-stopped
+
+  notification:
+    profiles: [app]
+    build: { context: ., target: notification }
+    image: gridpulse/notification:local
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-gridpulse}
+      POSTGRES_USER: ${POSTGRES_USER:-gridpulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-locally}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GRIDPULSE_JWT_SECRET: ${GRIDPULSE_JWT_SECRET:-}
+    ports: ["${NOTIFICATION_PORT:-8081}:8081"]
+    restart: unless-stopped
+
+  web:
+    profiles: [app]
+    build: ./frontend
+    image: gridpulse/web:local
+    depends_on: [api]
+    ports: ["${WEB_PORT:-3000}:80"]
+    restart: unless-stopped
+
 volumes:
   pgdata:

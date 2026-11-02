@@ -22,7 +22,7 @@ spring:
   application:
     name: gridpulse-ai
   datasource:
-    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5433}/${POSTGRES_DB:gridpulse}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:gridpulse}
     username: ${POSTGRES_USER:gridpulse}
     password: ${POSTGRES_PASSWORD:change-me-locally}
   jpa:

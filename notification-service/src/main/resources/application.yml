@@ -6,7 +6,7 @@ spring:
   datasource:
     # Same Postgres server, but this service owns its own schema and migrations ("schema per service"):
     # it never reads GridPulse tables, and GridPulse never reads these.
-    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5433}/${POSTGRES_DB:gridpulse}?currentSchema=notification
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:gridpulse}?currentSchema=notification
     username: ${POSTGRES_USER:gridpulse}
     password: ${POSTGRES_PASSWORD:change-me-locally}
   flyway:

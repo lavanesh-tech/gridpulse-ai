@@ -149,3 +149,9 @@ returned; answers whose citations reference no provided source are flagged `grou
   assistant can never reach anything the REST API would not allow for that user.
 - stdio transport: how desktop assistants launch local tools; no extra port to secure.
 - Read-only tools only. Booking through an assistant would need explicit human confirmation and is out of scope.
+
+## ADR-029: CI/CD without a cloud
+- GitHub Actions is the primary pipeline (free for public repos, runs Docker, so Testcontainers and E2E work as on the
+  laptop). A Jenkinsfile mirrors it for organisations on Jenkins; it has not been run against a Jenkins server.
+- CI builds images but does not push or deploy: there is no target environment yet (AWS intentionally deferred).
+- Images are built inside Docker (multi-stage) so they do not depend on the developer's JDK or Gradle cache.

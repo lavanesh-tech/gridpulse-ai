@@ -1,5 +1,5 @@
 {
-  "generatedAt" : "2026-11-02T01:46:00.965708Z",
+  "generatedAt" : "2026-11-02T01:54:45.105396Z",
   "note" : "Synthetic data and an invented tariff. Not real-world business results.",
   "javaVersion" : "21.0.12.1",
   "os" : "Mac OS X aarch64",
@@ -27,8 +27,8 @@
     "estimatedCost" : 604.42,
     "averagePricePerKwh" : 0.2282,
     "costVsBaselinePct" : 0.0,
-    "computeMsMedian" : 0.499417,
-    "computeMsP95" : 0.885291
+    "computeMsMedian" : 0.57475,
+    "computeMsP95" : 0.816334
   }, {
     "scenario" : "small",
     "seed" : 42,
@@ -50,8 +50,8 @@
     "estimatedCost" : 367.00,
     "averagePricePerKwh" : 0.1386,
     "costVsBaselinePct" : -39.3,
-    "computeMsMedian" : 0.507042,
-    "computeMsP95" : 0.6275
+    "computeMsMedian" : 0.514333,
+    "computeMsP95" : 0.720042
   }, {
     "scenario" : "small",
     "seed" : 42,
@@ -73,8 +73,8 @@
     "estimatedCost" : 291.35,
     "averagePricePerKwh" : 0.1100,
     "costVsBaselinePct" : -51.8,
-    "computeMsMedian" : 0.908875,
-    "computeMsP95" : 0.969083
+    "computeMsMedian" : 0.94625,
+    "computeMsP95" : 0.985792
   }, {
     "scenario" : "medium",
     "seed" : 42,
@@ -96,8 +96,8 @@
     "estimatedCost" : 6330.95,
     "averagePricePerKwh" : 0.2408,
     "costVsBaselinePct" : 0.0,
-    "computeMsMedian" : 2.281375,
-    "computeMsP95" : 2.52575
+    "computeMsMedian" : 2.659833,
+    "computeMsP95" : 2.837166
   }, {
     "scenario" : "medium",
     "seed" : 42,
@@ -119,8 +119,8 @@
     "estimatedCost" : 4295.26,
     "averagePricePerKwh" : 0.1634,
     "costVsBaselinePct" : -32.2,
-    "computeMsMedian" : 8.565,
-    "computeMsP95" : 10.074083
+    "computeMsMedian" : 11.764208,
+    "computeMsP95" : 12.017334
   }, {
     "scenario" : "medium",
     "seed" : 42,
@@ -142,8 +142,8 @@
     "estimatedCost" : 3000.76,
     "averagePricePerKwh" : 0.1144,
     "costVsBaselinePct" : -52.6,
-    "computeMsMedian" : 6.994,
-    "computeMsP95" : 7.186417
+    "computeMsMedian" : 8.144583,
+    "computeMsP95" : 8.44075
   }, {
     "scenario" : "large",
     "seed" : 42,
@@ -165,8 +165,8 @@
     "estimatedCost" : 25409.19,
     "averagePricePerKwh" : 0.2317,
     "costVsBaselinePct" : 0.0,
-    "computeMsMedian" : 12.700625,
-    "computeMsP95" : 14.149959
+    "computeMsMedian" : 12.250167,
+    "computeMsP95" : 13.399208
   }, {
     "scenario" : "large",
     "seed" : 42,
@@ -188,8 +188,8 @@
     "estimatedCost" : 17831.67,
     "averagePricePerKwh" : 0.1613,
     "costVsBaselinePct" : -29.8,
-    "computeMsMedian" : 54.711958,
-    "computeMsP95" : 55.034041
+    "computeMsMedian" : 52.878875,
+    "computeMsP95" : 53.319667
   }, {
     "scenario" : "large",
     "seed" : 42,
@@ -211,8 +211,8 @@
     "estimatedCost" : 12297.43,
     "averagePricePerKwh" : 0.1125,
     "costVsBaselinePct" : -51.6,
-    "computeMsMedian" : 57.473125,
-    "computeMsP95" : 57.935083
+    "computeMsMedian" : 54.711167,
+    "computeMsP95" : 55.429542
   } ],
   "aggregateSeeds1to20" : [ {
     "algorithm" : "baseline-fcfs",

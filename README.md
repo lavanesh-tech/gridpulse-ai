@@ -1,5 +1,7 @@
 # GridPulse AI
 
+[![CI](https://github.com/lavanesh-tech/gridpulse-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/lavanesh-tech/gridpulse-ai/actions/workflows/ci.yml)
+
 Intelligent EV fleet charging coordination platform: generates feasible charging schedules across
 multiple stations under grid-capacity, compatibility, deadline and tariff constraints, recalculates
 after disruptions, and compares optimized schedules against a documented baseline.
@@ -7,7 +9,7 @@ after disruptions, and compares optimized schedules against a documented baselin
 > All data is **synthetic**. Benchmark numbers in this repo come only from reproducible runs
 > described in [BENCHMARKS.md](BENCHMARKS.md); none represent real-world business impact.
 
-**Status:** Milestone 5 (Spring AI + RAG Energy Advisor) — see [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+**Status:** all 9 milestones complete (CI/CD last) — see [ROADMAP.md](ROADMAP.md) and [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
 ## Results so far (synthetic data, see [BENCHMARKS.md](BENCHMARKS.md))
 Over 40 seeded scenarios (50,000 vehicles), the deadlines-first scheduler meets 97.1% of deadlines vs 96.7% for a
@@ -37,6 +39,18 @@ set -a; source .env; set +a   # export the variables for the app
 cd frontend && npm install && npm run dev   # http://localhost:5173, /api proxied to :8080
 npm test                   # Vitest (runs in UTC)
 ```
+
+## Run everything in Docker (one command)
+```bash
+./scripts/stack.sh        # builds images, starts Postgres, Redis, Kafka, API, notification service and web console
+                          # web console: http://localhost:3000 (admin / password from .env)
+./scripts/stack.sh down   # stop (data volume kept)
+```
+
+## Continuous integration
+Every push runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml): backend tests with Testcontainers + coverage
+gate, frontend tests + build, Playwright end-to-end tests against a real stack, and the Docker image builds.
+[`Jenkinsfile`](Jenkinsfile) defines the same pipeline for Jenkins. Nothing is deployed.
 
 ## Events and the notification service
 ```bash

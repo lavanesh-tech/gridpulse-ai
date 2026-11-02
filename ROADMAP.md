@@ -9,8 +9,8 @@
 | 5 | Spring AI + RAG | Ingestion, chunking, embeddings in pgvector, tenant-filtered retrieval, cited answers, validated tool calling, retrieval evaluation | Done — verified, pushed (d65c449) |
 | 6 | React Frontend | Vite + TS + Tailwind, TanStack Query, ECharts night-strip schedule timeline + analytics, planner + what-if, advisor, JWT sign-in | Done — verified, pushed (5e7e24e) |
 | 7 | Testing + Observability | Health probes, Prometheus metrics (scheduler, advisor, HTTP), request ids, coverage gate, Playwright E2E, k6 load test | Done — verified, pushed (052a6af) |
-| 8 | Events + Integrations | Transactional outbox → Kafka (KRaft), notification microservice (idempotent consumer, dead-letter topic, schema per service), MCP server for the advisor tools | In progress — Kafka + notifications verified; MCP server written, awaiting verification |
-| 9 | CI/CD | GitHub Actions + Jenkinsfile, Docker images, whole stack via Docker Compose | Planned |
+| 8 | Events + Integrations | Transactional outbox → Kafka (KRaft), notification microservice (idempotent consumer, dead-letter topic, schema per service), MCP server for the advisor tools | Done — verified, pushed (a9af685) |
+| 9 | CI/CD | GitHub Actions + Jenkinsfile, multi-stage Docker images, whole stack via Docker Compose | In progress — written, awaiting verification |
 | — | AWS (optional, later) | Bedrock, Terraform (ECS, ECR, RDS, S3, Lambda, API Gateway), CloudWatch | Not planned until the author asks |
 
 Each milestone ends with: local verification (`./scripts/verify.sh`) → commit and push by the author

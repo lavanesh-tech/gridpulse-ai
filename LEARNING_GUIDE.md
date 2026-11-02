@@ -327,3 +327,14 @@ Extract a service when it has its own reason to change, scale or fail; otherwise
 ## 58. RAG vs tool calling vs MCP
 RAG puts relevant documents into the prompt. Tool calling lets a model ask your code to run a function. MCP is a
 standard protocol so any AI app can discover and call your tools; here it wraps the same safe, read-only operations.
+
+## 59. Continuous integration
+Every push is built and tested on a clean machine, so "works on my laptop" problems show up immediately.
+Jobs run in parallel where independent (backend, frontend) and in sequence where one needs the other (E2E).
+
+## 60. Multi-stage Docker builds
+Stage one has the full JDK and build tools; the final image copies only the jar onto a JRE base. Smaller, fewer tools
+for an attacker, and the build is reproducible anywhere Docker runs. Run as a non-root user.
+
+## 61. Reverse proxy
+nginx serves the web files and forwards /api to the backend container, so the browser talks to one origin (no CORS).
