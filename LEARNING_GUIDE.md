@@ -307,3 +307,23 @@ Playwright drives a real browser through the real stack. Few, slow, valuable: th
 ## 52. Load testing
 k6 "constant arrival rate" sends a fixed number of requests per second regardless of response time (an open model),
 which shows how latency grows under load instead of hiding it.
+
+## 53. Kafka basics
+A topic is split into partitions; records with the same key go to the same partition, in order. Consumers in one
+group share partitions; offsets record how far each group has read.
+
+## 54. The dual-write problem and the transactional outbox
+Never "save to DB, then send to Kafka" as two steps. Save the event in the same DB transaction, relay it afterwards.
+
+## 55. Delivery guarantees and idempotent consumers
+At-least-once means duplicates can arrive. Store each processed event id under a unique constraint and skip repeats.
+
+## 56. Dead-letter topics
+A message that can never succeed is moved aside so it does not block every message behind it.
+
+## 57. Monolith vs microservices
+Extract a service when it has its own reason to change, scale or fail; otherwise modules in one deployable are simpler.
+
+## 58. RAG vs tool calling vs MCP
+RAG puts relevant documents into the prompt. Tool calling lets a model ask your code to run a function. MCP is a
+standard protocol so any AI app can discover and call your tools; here it wraps the same safe, read-only operations.

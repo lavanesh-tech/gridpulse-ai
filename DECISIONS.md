@@ -134,3 +134,18 @@ returned; answers whose citations reference no provided source are flagged `grou
 - E2E/load tests run against throwaway containers, not the developer database, and never load .env, so they are
   reproducible and never spend OpenAI credit. k6 runs from its Docker image, so nothing extra is installed.
 - Load figures are measured on a laptop and only compared run-to-run; they are not a capacity claim for production.
+
+## ADR-027: Kafka via a transactional outbox, plus one extracted microservice
+- Outbox over dual writes (see ARCHITECTURE.md). Relay uses SKIP LOCKED so multiple instances can run it.
+- Spring Kafka directly rather than Spring Modulith event externalisation: fewer moving parts, and every step
+  (claim, send, acknowledge, mark) is visible and testable.
+- Notification service extracted because it has a different change rate and failure mode (it can be down without
+  affecting planning), not to "do microservices". Schema-per-service on the same Postgres keeps local setup light;
+  a separate database is a configuration change.
+- Contract: JSON envelope {eventId, eventType, tenantId, aggregateId, occurredAt, data}; consumers ignore unknown fields.
+
+## ADR-028: MCP server as a separate API client, over stdio
+- Separate process instead of an MCP endpoint inside the API: no second authentication path into the core, and the
+  assistant can never reach anything the REST API would not allow for that user.
+- stdio transport: how desktop assistants launch local tools; no extra port to secure.
+- Read-only tools only. Booking through an assistant would need explicit human confirmation and is out of scope.

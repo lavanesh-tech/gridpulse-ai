@@ -111,3 +111,25 @@ Every advisor call is audited (question hash, source/citation counts, whether th
 - `RequestIdFilter` runs first: one id per request in MDC, so logs from every module can be correlated.
 - Test layers: unit (engine, chunker, client), integration (Testcontainers Postgres, real security chain),
   browser E2E (Playwright, real stack), load (k6). E2E and load use throwaway infrastructure started by scripts.
+
+## Events and the notification service (Milestone 8)
+```
+ChargingSessionService --(same DB transaction)--> outbox_event --OutboxRelay--> Kafka gridpulse.session-events
+                                                                                      |
+                                                       notification-service (consumer group) --> notification schema
+```
+- Why an outbox: writing to the database and to Kafka are two systems; doing both directly can lose an event (crash
+  after commit) or publish one for a rolled-back change. The outbox makes the event part of the database commit.
+- Delivery is at-least-once; the consumer is idempotent (processed_event primary key), so duplicates are harmless.
+- Ordering: the key is the session id, so all events of one session land in one partition, in order.
+- Poison messages go to `<topic>-dlt` after retries instead of blocking the partition.
+- The notification service is the one extracted microservice: separately deployable, owns its schema, talks to
+  GridPulse only through Kafka events and the shared JWT format. The core stays a modular monolith (ADR-001).
+
+## MCP server
+```
+AI assistant (Claude Desktop) --stdio JSON-RPC--> mcp-server --HTTPS + JWT--> GridPulse REST API
+```
+The MCP server holds no data and no privileges of its own: it is an API client signed in as a GridPulse user, so tenant
+isolation, roles and rate limits are enforced by the same code as for the web console. Tools are read-only (planning
+uses the preview endpoint) and return compact summaries instead of raw schedules.

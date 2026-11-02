@@ -38,6 +38,26 @@ cd frontend && npm install && npm run dev   # http://localhost:5173, /api proxie
 npm test                   # Vitest (runs in UTC)
 ```
 
+## Events and the notification service
+```bash
+./scripts/run-local.sh            # API on :8080; session changes are published to Kafka (localhost:9094)
+./scripts/run-notifications.sh    # notification service on :8081, consuming those events
+curl -H "Authorization: Bearer $TOKEN" localhost:8081/api/v1/notifications
+```
+
+## MCP server (use GridPulse from an AI assistant)
+`mcp-server/` is a Model Context Protocol server (stdio). It signs in to the GridPulse API as a normal user, so tenant
+isolation and roles still apply, and offers read-only tools: `listFleets`, `listVehicles`, `planTonight`,
+`compareStrategies`, `askDepotDocuments`. Build it with `./gradlew :mcp-server:bootJar`, then add to Claude Desktop's
+`claude_desktop_config.json`:
+```json
+{ "mcpServers": { "gridpulse": {
+    "command": "java",
+    "args": ["-jar", "/Users/<you>/Desktop/gridpulse-ai/mcp-server/build/libs/mcp-server-0.1.0-SNAPSHOT.jar"],
+    "env": { "GRIDPULSE_API_URL": "http://localhost:8080", "GRIDPULSE_USERNAME": "<a viewer user>", "GRIDPULSE_PASSWORD": "<password>" }
+} } }
+```
+
 ## Tests, monitoring and load
 ```bash
 ./scripts/verify.sh      # backend tests (Testcontainers) + coverage gate + frontend tests/build

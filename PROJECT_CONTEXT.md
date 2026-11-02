@@ -60,6 +60,17 @@ First run caught the lexical relevance threshold set too low (0.10); raised to 0
 - `ObservabilityIT`; Playwright E2E (`scripts/e2e.sh`, 5 tests); k6 load test (`scripts/load-test.sh`, runs in Docker)
 - E2E and load tests use a throwaway Postgres + API (never .env, never OpenAI)
 
+## Milestone 8 — Events + Integrations: IN PROGRESS
+- `events` module: transactional outbox (V6 `outbox_event`), written in the same transaction as every session change
+  (RESERVED/STARTED/COMPLETED/CANCELLED/INTERRUPTED); `OutboxRelay` (FOR UPDATE SKIP LOCKED, acks=all, idempotent
+  producer) publishes to `gridpulse.session-events`, key = session id. Off unless GRIDPULSE_EVENTS_KAFKA_ENABLED=true.
+- `notification-service/` (Gradle subproject, port 8081): idempotent Kafka consumer, own `notification` schema +
+  Flyway, DLT for malformed messages, tenant-scoped GET /api/v1/notifications with the same JWTs.
+- Kafka 3.9.1 (KRaft) in docker-compose on localhost:9094.
+- Tests: `SessionEventsIT` (Testcontainers Kafka), `NotificationFlowIT`, `NotificationRulesTest`. Not yet run.
+- `mcp-server/` (Gradle subproject): Spring AI MCP server over stdio; an API client of GridPulse (signs in as a user,
+  re-signs in on 401), 5 read-only tools; `GridPulseToolsTest` with a mocked API. Not yet run.
+
 ## Known issues / limitations
 - Deadlines-first helps urgent vehicles at the expense of priority 0 (by design); cost-first meets fewer deadlines than baseline.
 - Recalculation re-plans from the next slot boundary (up to one slot lost); late failures may be unrecoverable under ALAP.

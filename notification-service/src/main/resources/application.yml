@@ -1,0 +1,39 @@
+server:
+  port: ${NOTIFICATION_PORT:8081}
+spring:
+  application:
+    name: notification-service
+  datasource:
+    # Same Postgres server, but this service owns its own schema and migrations ("schema per service"):
+    # it never reads GridPulse tables, and GridPulse never reads these.
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5433}/${POSTGRES_DB:gridpulse}?currentSchema=notification
+    username: ${POSTGRES_USER:gridpulse}
+    password: ${POSTGRES_PASSWORD:change-me-locally}
+  flyway:
+    schemas: notification
+    default-schema: notification
+    create-schemas: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:   # only used to forward unreadable messages to the dead-letter topic
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+notification:
+  topic: gridpulse.session-events
+  # Validates the same HS256 tokens GridPulse issues, so one sign-in works for both services.
+  jwt-secret: ${GRIDPULSE_JWT_SECRET:}
+  issuer: gridpulse-ai

@@ -1,6 +1,7 @@
 package com.gridpulse.session;
 
 import com.gridpulse.audit.AuditLog;
+import com.gridpulse.events.Outbox;
 import com.gridpulse.shared.domain.PowerKw;
 import com.gridpulse.shared.domain.TimeWindow;
 import com.gridpulse.shared.error.BusinessRuleException;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -40,10 +42,12 @@ public class ChargingSessionService {
     private final ChargingStationRepository stations;
     private final JdbcTemplate jdbc;
     private final AuditLog audit;
+    private final Outbox outbox;
 
     public ChargingSessionService(ChargingSessionRepository sessions, VehicleRepository vehicles,
                                   ChargerRepository chargers, ChargingStationRepository stations,
-                                  JdbcTemplate jdbc, AuditLog audit) {
+                                  JdbcTemplate jdbc, AuditLog audit, Outbox outbox) {
+        this.outbox = outbox;
         this.sessions = sessions;
         this.vehicles = vehicles;
         this.chargers = chargers;
@@ -105,6 +109,7 @@ public class ChargingSessionService {
         audit.record(tenantId, actor, "RESERVE_SESSION", "charging_session", saved.getId().toString(),
                 Map.of("vehicleId", vehicleId.toString(), "chargerId", chargerId.toString(),
                         "start", window.start().toString(), "end", window.end().toString()));
+        publish(saved, "SESSION_RESERVED");
         return saved;
     }
 
@@ -122,30 +127,45 @@ public class ChargingSessionService {
 
     @Transactional
     public ChargingSession cancel(UUID tenantId, String actor, UUID sessionId) {
-        return transition(tenantId, actor, sessionId, "CANCEL_SESSION", ChargingSession::cancel);
+        return transition(tenantId, actor, sessionId, "CANCEL_SESSION", "SESSION_CANCELLED", ChargingSession::cancel);
     }
 
     @Transactional
     public ChargingSession start(UUID tenantId, String actor, UUID sessionId) {
-        return transition(tenantId, actor, sessionId, "START_SESSION", ChargingSession::start);
+        return transition(tenantId, actor, sessionId, "START_SESSION", "SESSION_STARTED", ChargingSession::start);
     }
 
     @Transactional
     public ChargingSession complete(UUID tenantId, String actor, UUID sessionId) {
-        return transition(tenantId, actor, sessionId, "COMPLETE_SESSION", ChargingSession::complete);
+        return transition(tenantId, actor, sessionId, "COMPLETE_SESSION", "SESSION_COMPLETED", ChargingSession::complete);
     }
 
     @Transactional
     public ChargingSession interrupt(UUID tenantId, String actor, UUID sessionId, String reason) {
-        return transition(tenantId, actor, sessionId, "INTERRUPT_SESSION", s -> s.interrupt(reason));
+        return transition(tenantId, actor, sessionId, "INTERRUPT_SESSION", "SESSION_INTERRUPTED", s -> s.interrupt(reason));
     }
 
-    private ChargingSession transition(UUID tenantId, String actor, UUID sessionId, String action,
+    private ChargingSession transition(UUID tenantId, String actor, UUID sessionId, String action, String eventType,
                                        Consumer<ChargingSession> change) {
         ChargingSession s = sessions.findByIdAndTenantId(sessionId, tenantId)
                 .orElseThrow(() -> new NotFoundException("session", sessionId));
         change.accept(s);
         audit.record(tenantId, actor, action, "charging_session", sessionId.toString(), Map.of());
+        publish(s, eventType);
         return s;
+    }
+
+    /** Integration event for other services (e.g. notifications), written in this same transaction. */
+    private void publish(ChargingSession s, String eventType) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("sessionId", s.getId().toString());
+        data.put("vehicleId", s.getVehicleId().toString());
+        data.put("chargerId", s.getChargerId().toString());
+        data.put("startsAt", s.getWindow().start().toString());
+        data.put("endsAt", s.getWindow().end().toString());
+        data.put("powerKw", s.getPower().value());
+        data.put("status", s.getStatus().name());
+        if (s.getInterruptionReason() != null) data.put("reason", s.getInterruptionReason());
+        outbox.record(s.getTenantId(), "charging_session", s.getId(), eventType, data);
     }
 }

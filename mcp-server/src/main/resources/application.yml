@@ -1,0 +1,26 @@
+# stdout carries the MCP protocol, so nothing else may be printed there: no banner, no console logging.
+spring:
+  main:
+    web-application-type: none
+    banner-mode: off
+  ai:
+    mcp:
+      server:
+        name: gridpulse
+        version: 0.1.0
+        stdio: true
+        instructions: >
+          Read-only tools for an EV fleet depot: list fleets and vehicles, plan tonight's charging,
+          compare scheduling strategies, and ask questions answered from the depot's own documents.
+          Nothing is ever booked or changed.
+logging:
+  pattern:
+    console: ""
+  file:
+    name: ${java.io.tmpdir}/gridpulse-mcp.log
+gridpulse:
+  # The MCP server is just another API client: it signs in as a GridPulse user, so the API's tenant isolation and
+  # role checks apply to everything the AI assistant does. Use a VIEWER or FLEET_MANAGER account, not ADMIN.
+  api-url: ${GRIDPULSE_API_URL:http://localhost:8080}
+  username: ${GRIDPULSE_USERNAME:}
+  password: ${GRIDPULSE_PASSWORD:}

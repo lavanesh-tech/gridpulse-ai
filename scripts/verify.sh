@@ -16,6 +16,7 @@ trap "docker compose down >/dev/null 2>&1" EXIT
 docker compose up -d --wait
 docker compose exec -T postgres psql -U gridpulse -d gridpulse -c "select 1" >/dev/null && echo "Postgres OK"
 docker compose exec -T redis redis-cli ping
+docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9094 --list >/dev/null && echo "Kafka OK"
 
 echo "== Frontend (Node) =="
 if ! command -v npm >/dev/null; then

@@ -31,6 +31,16 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all          # wait for the broker to persist the record before marking the outbox row published
+      properties:
+        enable.idempotence: true
+    admin:
+      fail-fast: false   # the app starts even if Kafka is down; the outbox simply waits
 management:
   endpoints:
     web:
@@ -54,6 +64,12 @@ logging:
     # every log line carries the request id (also returned to the client as X-Request-Id)
     level: "%5p [%X{requestId:-}]"
 gridpulse:
+  events:
+    kafka:
+      # Off by default (tests, demos without Kafka): events still go to the outbox table and wait there.
+      enabled: ${GRIDPULSE_EVENTS_KAFKA_ENABLED:false}
+    topic: gridpulse.session-events
+    relay-interval: 1s
   security:
     # HS256 signing key, >= 32 bytes. Supply via environment; never commit a real value.
     jwt-secret: ${GRIDPULSE_JWT_SECRET:}

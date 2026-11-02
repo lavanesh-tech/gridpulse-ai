@@ -1,1 +1,6 @@
 rootProject.name = 'gridpulse-ai'
+
+// A separately deployable service that reacts to GridPulse session events from Kafka.
+include 'notification-service'
+// MCP server: lets AI assistants (e.g. Claude Desktop) use GridPulse's read-only planning tools.
+include 'mcp-server'
