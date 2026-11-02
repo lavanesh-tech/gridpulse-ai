@@ -77,6 +77,20 @@ outcome for an embedder that cannot match meaning. Found by `AdvisorIT` failing 
 The lexical numbers were measured offline with the same chunker and embedder (brute-force cosine) and are re-checked
 against pgvector by `AdvisorIT`. Fourteen questions is a smoke test, not a benchmark of semantic quality.
 
+## API load test (Milestone 7)
+k6 1.0.0 (Docker) against a throwaway stack on the author's laptop (Apple M5 Pro, 15 cores; app, Postgres and k6 on the
+same machine), 2026-11-01. Open model, 60 s: 50 list requests/s plus 5 schedule previews/s, where each preview plans a
+synthetic depot of 100 vehicles on 20 chargers (PRIORITY_SLACK). Raw: `benchmarks/results/load-test-latest.json`.
+
+| Workload | p50 | p95 | max | Errors |
+|---|---|---|---|---|
+| Reads (fleets, vehicles) | 5.3 ms | 8.8 ms | 28.3 ms | 0% |
+| Schedule preview, 100 vehicles | 13.9 ms | 18.4 ms | 56.4 ms | 0% |
+
+All thresholds passed (errors < 1%, read p95 < 250 ms, plan p95 < 1500 ms), and every preview had zero constraint
+violations. This is a single-machine run at a modest fixed rate: it shows latency headroom, not maximum throughput or
+production capacity. Request counts were not captured in this run (fixed in the script for later runs).
+
 ## Not yet measured (later milestones)
-API p50/p95/p99 latency and DB query timings (M7, k6), concurrent reservation conflict rates under load (M7),
-test coverage (JaCoCo report published in CI, M8).
+DB query timings, concurrent reservation conflict rates under load, maximum throughput, JaCoCo report published in CI.
+Test coverage at M7: gate at 80% instructions / 70% branches (measured 82% / 75% before M7).

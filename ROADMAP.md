@@ -8,7 +8,7 @@
 | 4 | Optimization + Analytics | Tariffs + cost model, deadlines-first vs cost-first objectives, per-priority metrics, existing-reservation-aware planning, grid load profiles, disruption recalculation, analytics summary, session history, 40-scenario benchmark | Done — verified, pushed (1a442ba) |
 | 5 | Spring AI + RAG | Ingestion, chunking, embeddings in pgvector, tenant-filtered retrieval, cited answers, validated tool calling, retrieval evaluation | Done — verified, pushed (d65c449) |
 | 6 | React Frontend | Vite + TS + Tailwind, TanStack Query, ECharts night-strip schedule timeline + analytics, planner + what-if, advisor, JWT sign-in | Done — verified, pushed (5e7e24e) |
-| 7 | Testing + Observability | Coverage, Testcontainers suites, frontend + E2E tests, k6 load tests, Actuator/Micrometer metrics | Planned |
+| 7 | Testing + Observability | Health probes, Prometheus metrics (scheduler, advisor, HTTP), request ids, coverage gate, Playwright E2E, k6 load test | Done — verified (publish pending) |
 | 8 | DevOps + AWS | GitHub Actions CI, Docker images, Terraform (ECS, ECR, RDS, S3, CloudWatch), hardening, deployment docs | Planned — needs your AWS approval |
 
 Each milestone ends with: local verification (`./scripts/verify.sh`) → commit and push by the author

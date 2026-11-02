@@ -38,6 +38,15 @@ cd frontend && npm install && npm run dev   # http://localhost:5173, /api proxie
 npm test                   # Vitest (runs in UTC)
 ```
 
+## Tests, monitoring and load
+```bash
+./scripts/verify.sh      # backend tests (Testcontainers) + coverage gate + frontend tests/build
+./scripts/e2e.sh         # Playwright browser tests against a throwaway API + database
+./scripts/load-test.sh   # k6 load test (in Docker) against a throwaway stack -> benchmarks/results/load-test-latest.json
+```
+Health: `GET /actuator/health` (public; liveness/readiness sub-paths). Metrics: `GET /actuator/prometheus` (ADMIN token).
+Every response carries `X-Request-Id`, which also appears in the server log line for that request.
+
 ## Enabling the AI Energy Advisor (optional)
 Everything runs without an AI key: retrieval uses an offline embedder and the advisor returns sources and computed facts.
 To use OpenAI (gpt-4o-mini + text-embedding-3-small):

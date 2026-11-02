@@ -287,3 +287,23 @@ Utility classes composed in markup; design tokens (colors, fonts) live once in `
 ## 46. Testing UIs
 Testing Library queries by role and label, the way a user finds things; `fetch` is mocked so tests need no backend.
 Time-dependent tests run with `TZ=UTC` so they pass on any machine.
+
+## 47. Health checks: liveness vs readiness
+Liveness = "the process is not stuck" (restart if it fails). Readiness = "send me traffic" (e.g. database reachable).
+
+## 48. Metrics with Micrometer
+Counters only go up (vehicles planned), timers record durations (scheduler run), tags split them (algorithm). Prometheus
+scrapes `/actuator/prometheus`; percentiles like p95 say "95% of requests were faster than this".
+
+## 49. Correlation ids
+One id per request, written on every log line and returned to the caller, lets you find all logs for one failing call.
+
+## 50. Code coverage as a gate
+Coverage shows which code tests executed, not whether they assert the right thing. A floor stops untested code creeping in.
+
+## 51. End-to-end tests
+Playwright drives a real browser through the real stack. Few, slow, valuable: they catch wiring bugs unit tests cannot.
+
+## 52. Load testing
+k6 "constant arrival rate" sends a fixed number of requests per second regardless of response time (an open model),
+which shows how latency grows under load instead of hiding it.

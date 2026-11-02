@@ -102,3 +102,12 @@ Every advisor call is audited (question hash, source/citation counts, whether th
 - `lib/schedule.ts` turns API schedules into chart data (lanes, bars, tariff bands, load steps) as pure, unit-tested functions.
 - The planner page and ECharts load lazily so sign-in and dashboard stay small.
 - The UI enforces roles only for convenience; the server is the authority (RBAC + tenant from JWT).
+
+## Observability (Milestone 7)
+- Spring Boot Actuator + Micrometer with the Prometheus registry. Probes are public so a load balancer or ECS can poll
+  them; metrics and health details need an ADMIN token because they reveal internals.
+- Business metrics sit next to the code they measure: the scheduler timer wraps only the engine call (not data loading),
+  and advisor outcomes distinguish refusals, sources-only answers (no model), grounded and ungrounded answers.
+- `RequestIdFilter` runs first: one id per request in MDC, so logs from every module can be correlated.
+- Test layers: unit (engine, chunker, client), integration (Testcontainers Postgres, real security chain),
+  browser E2E (Playwright, real stack), load (k6). E2E and load use throwaway infrastructure started by scripts.

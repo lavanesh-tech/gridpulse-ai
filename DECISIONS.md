@@ -124,3 +124,13 @@ returned; answers whose citations reference no provided source are flagged `grou
   The schedule night-strip (charger lanes over tariff bands with grid load below) is the one prominent element.
 - ECharts is tree-shaken and the planner route lazy-loaded to keep the initial bundle small.
 - JWT in sessionStorage (cleared when the tab closes); acceptable for a demo, httpOnly cookie + BFF noted for production.
+
+## ADR-026: Observability and test strategy
+- Micrometer + Prometheus format (vendor-neutral; CloudWatch can scrape it in M8). Percentile histograms for HTTP and the
+  scheduler so p95/p99 can be computed server-side.
+- Probes public, everything else under /actuator ADMIN-only.
+- Coverage gate set just below the measured baseline instead of an aspirational number, so it catches regressions
+  without encouraging low-value tests.
+- E2E/load tests run against throwaway containers, not the developer database, and never load .env, so they are
+  reproducible and never spend OpenAI credit. k6 runs from its Docker image, so nothing extra is installed.
+- Load figures are measured on a laptop and only compared run-to-run; they are not a capacity claim for production.

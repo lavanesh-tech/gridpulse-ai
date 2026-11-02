@@ -67,8 +67,10 @@ class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, RateLimitFilter.LOGIN_PATH).permitAll()
-                        .requestMatchers("/actuator/health", "/error",
+                        .requestMatchers("/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness",
+                                "/actuator/info", "/error",
                                 "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(o -> o.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
                 .addFilterAfter(new RateLimitFilter(new RateLimiter(props.requestsPerMinute()),

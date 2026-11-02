@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "test": "TZ=UTC vitest run",
-    "lint:types": "tsc --noEmit"
+    "lint:types": "tsc --noEmit",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource/barlow": "5.2.6",
@@ -19,6 +20,7 @@
     "react-router": "7.9.4"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@tailwindcss/vite": "4.1.16",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.0",

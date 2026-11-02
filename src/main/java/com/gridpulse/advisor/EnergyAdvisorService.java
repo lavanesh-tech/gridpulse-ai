@@ -8,6 +8,8 @@ import com.gridpulse.scheduling.SchedulePreviewService.Algorithm;
 import com.gridpulse.scheduling.SchedulePreviewService.Preview;
 import com.gridpulse.scheduling.SchedulePreviewService.PreviewInput;
 import com.gridpulse.scheduling.UnmetRequest;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -65,9 +67,12 @@ public class EnergyAdvisorService {
     private final int topK;
     private final String chatModelName;
 
+    private final MeterRegistry meters;
+
     EnergyAdvisorService(KnowledgeService knowledge, SchedulePreviewService scheduler, ObjectProvider<ChatModel> chatModel,
-                         AuditLog audit, @Value("${gridpulse.ai.retrieval-top-k:5}") int topK,
+                         AuditLog audit, MeterRegistry meters, @Value("${gridpulse.ai.retrieval-top-k:5}") int topK,
                          @Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}") String chatModelName) {
+        this.meters = meters;
         this.knowledge = knowledge;
         this.scheduler = scheduler;
         this.chatModel = chatModel;
@@ -119,7 +124,9 @@ public class EnergyAdvisorService {
                 user.append("[S").append(s.ref()).append("] (").append(s.title()).append(")\n").append(s.text()).append("\n\n");
             }
             user.append("Question: ").append(question);
-            answer = ChatClient.builder(model).build().prompt().system(ASK_SYSTEM).user(user.toString()).call().content();
+            answer = Timer.builder("gridpulse.advisor.model.latency").description("Chat model call duration")
+                    .tag("operation", "ask").register(meters)
+                    .record(() -> ChatClient.builder(model).build().prompt().system(ASK_SYSTEM).user(user.toString()).call().content());
             Set<Integer> refs = Citations.referenced(answer, sources.size());
             for (int r : refs) {
                 KnowledgeService.Source s = sources.get(r - 1);
@@ -128,6 +135,8 @@ public class EnergyAdvisorService {
             }
             grounded = !refs.isEmpty();
         }
+        String outcome = sources.isEmpty() ? "refused_no_sources" : model == null ? "sources_only" : grounded ? "grounded" : "ungrounded";
+        meters.counter("gridpulse.advisor.questions", "outcome", outcome).increment();
         audit.record(tenantId, actor, "ADVISOR_ASK", "advisor", null, Map.of(
                 "questionSha256", KnowledgeService.sha256(question), "sources", sources.size(),
                 "citations", citations.size(), "aiCalled", model != null && !sources.isEmpty()));

@@ -41,6 +41,7 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.springframework.modulith:spring-modulith-starter-core'
     runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
@@ -67,3 +68,16 @@ tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
 }
+
+// Coverage gate, set just under what the suite measured when it was introduced (82% instructions, 75% branches),
+// so coverage can only drift down a little before the build fails.
+jacocoTestCoverageVerification {
+    dependsOn tasks.named('test')
+    violationRules {
+        rule {
+            limit { counter = 'INSTRUCTION'; minimum = 0.80 }
+            limit { counter = 'BRANCH'; minimum = 0.70 }
+        }
+    }
+}
+tasks.named('check') { dependsOn jacocoTestCoverageVerification }

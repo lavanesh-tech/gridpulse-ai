@@ -1,0 +1,19 @@
+{
+  "duration": "60s",
+  "readRps": 50,
+  "planRps": 5,
+  "vehicles": 100,
+  "chargers": 20,
+  "reads": {
+    "med": 5.324167,
+    "p95": 8.832875,
+    "max": 28.276375
+  },
+  "plans": {
+    "med": 13.858958,
+    "p95": 18.396510399999993,
+    "max": 56.425709
+  },
+  "errorRate": 0,
+  "thresholdsPassed": true
+}

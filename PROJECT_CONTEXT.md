@@ -51,6 +51,15 @@ First run caught the lexical relevance threshold set too low (0.10); raised to 0
 - Tests: 19 Vitest + Testing Library tests passed in the assistant workspace; tsc clean; production build OK
   (initial bundle 289 kB / 91 kB gzip; planner chunk lazy-loaded). package-lock.json is generated on first `npm install`.
 
+## Milestone 7 — Testing + Observability: VERIFIED on the Mac (5/5 E2E, load test passed)
+- Actuator: public /actuator/health, /health/liveness, /health/readiness; /actuator/metrics and /prometheus ADMIN-only
+- Custom metrics: gridpulse.schedule.compute (timer, per algorithm), gridpulse.schedule.vehicles (planned/unmet),
+  gridpulse.advisor.questions (outcome), gridpulse.advisor.model.latency
+- X-Request-Id on every request (echoed, validated, in every log line)
+- JaCoCo gate in `check`: instructions >= 80%, branches >= 70% (measured 82% / 75% before M7)
+- `ObservabilityIT`; Playwright E2E (`scripts/e2e.sh`, 5 tests); k6 load test (`scripts/load-test.sh`, runs in Docker)
+- E2E and load tests use a throwaway Postgres + API (never .env, never OpenAI)
+
 ## Known issues / limitations
 - Deadlines-first helps urgent vehicles at the expense of priority 0 (by design); cost-first meets fewer deadlines than baseline.
 - Recalculation re-plans from the next slot boundary (up to one slot lost); late failures may be unrecoverable under ALAP.
@@ -60,4 +69,5 @@ First run caught the lexical relevance threshold set too low (0.10); raised to 0
 
 ## Next steps
 1. Milestone 6 published (5e7e24e). OpenAI enabled locally via scripts/setup-openai.sh; publish the OpenAI scripts + re-embed fix.
-3. Milestone 7: testing + observability (E2E, k6, Actuator/Micrometer).
+2. Verify M7: ./scripts/verify.sh && ./scripts/e2e.sh && ./scripts/load-test.sh; record load numbers; publish.
+3. Milestone 8: CI/CD, Docker image, Terraform (needs AWS approval).

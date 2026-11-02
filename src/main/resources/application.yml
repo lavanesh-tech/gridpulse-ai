@@ -35,15 +35,32 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true   # /actuator/health/liveness and /readiness for the container platform
+      show-details: when-authorized
+      roles: ADMIN
+  metrics:
+    tags:
+      application: gridpulse-ai
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        gridpulse.schedule.compute: true
+logging:
+  pattern:
+    # every log line carries the request id (also returned to the client as X-Request-Id)
+    level: "%5p [%X{requestId:-}]"
 gridpulse:
   security:
     # HS256 signing key, >= 32 bytes. Supply via environment; never commit a real value.
     jwt-secret: ${GRIDPULSE_JWT_SECRET:}
     issuer: gridpulse-ai
     token-ttl: 1h
-    requests-per-minute: 120
-    login-requests-per-minute: 10
+    requests-per-minute: ${GRIDPULSE_RATE_LIMIT_PER_MINUTE:120}
+    login-requests-per-minute: ${GRIDPULSE_LOGIN_RATE_LIMIT_PER_MINUTE:10}
   bootstrap:
     # If set and no users exist, creates a demo tenant and an ADMIN user on startup (local use only).
     admin-username: ${GRIDPULSE_ADMIN_USERNAME:admin}

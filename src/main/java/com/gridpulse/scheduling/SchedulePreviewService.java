@@ -6,6 +6,8 @@ import com.gridpulse.shared.domain.PowerKw;
 import com.gridpulse.shared.domain.StateOfCharge;
 import com.gridpulse.shared.domain.TimeWindow;
 import com.gridpulse.shared.error.NotFoundException;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +31,11 @@ import java.util.UUID;
 @Service
 public class SchedulePreviewService {
     private final JdbcTemplate jdbc;
+    private final MeterRegistry meters;
 
-    public SchedulePreviewService(JdbcTemplate jdbc) {
+    public SchedulePreviewService(JdbcTemplate jdbc, MeterRegistry meters) {
         this.jdbc = jdbc;
+        this.meters = meters;
     }
 
     public enum Algorithm { BASELINE, PRIORITY_SLACK, PRIORITY_SLACK_COST }
@@ -99,8 +103,18 @@ public class SchedulePreviewService {
         };
     }
 
-    private static Preview run(SchedulingProblem problem, ChargingScheduler scheduler) {
-        ChargingSchedule schedule = scheduler.schedule(problem);
+    /** Times the engine only (not the database loading) and counts vehicles left short, per algorithm. */
+    private Preview run(SchedulingProblem problem, ChargingScheduler scheduler) {
+        String algorithm = scheduler.name();
+        ChargingSchedule schedule = Timer.builder("gridpulse.schedule.compute")
+                .description("Time the scheduling engine spends planning one request")
+                .tag("algorithm", algorithm)
+                .register(meters)
+                .record(() -> scheduler.schedule(problem));
+        meters.counter("gridpulse.schedule.vehicles", "algorithm", algorithm, "outcome", "planned")
+                .increment(problem.requests().size() - schedule.unmet().size());
+        meters.counter("gridpulse.schedule.vehicles", "algorithm", algorithm, "outcome", "unmet")
+                .increment(schedule.unmet().size());
         List<Violation> violations = new ScheduleValidator().validate(problem, schedule);
         return new Preview(schedule, violations, ScheduleMetrics.of(problem, schedule, violations),
                 GridLoadProfile.of(problem, schedule), problem.fixedBookings().size());
