@@ -71,10 +71,12 @@ First run caught the lexical relevance threshold set too low (0.10); raised to 0
 - `mcp-server/` (Gradle subproject): Spring AI MCP server over stdio; an API client of GridPulse (signs in as a user,
   re-signs in on 401), 5 read-only tools; `GridPulseToolsTest` with a mocked API.
 
-## Milestone 9 — CI/CD: IN PROGRESS
+## Milestone 9 — CI/CD: DONE (GitHub Actions run 41375619591: all 4 jobs green)
 - `.github/workflows/ci.yml`: backend (Gradle build: all tests + coverage gate), frontend (npm ci/test/build),
   E2E (scripts/e2e.sh), Docker image builds. No deployment, no secrets needed.
 - `Jenkinsfile`: same stages (written; not executed - no Jenkins server).
+- Runners pinned to ubuntu-24.04: Playwright 1.56 cannot install browser deps on Ubuntu 26 (ubuntu-latest from Oct 2026).
+- `scripts/stack.sh` verified on the Mac: all 6 containers up, web/API/notification smoke checks passed.
 - `Dockerfile` (multi-stage, targets `api`, `notification`; non-root, JRE runtime), `frontend/Dockerfile` (nginx,
   /api reverse proxy, SPA fallback). docker-compose profile `app`; Kafka has internal + external listeners.
 - `scripts/stack.sh` builds and runs the whole stack and smoke-tests it.
@@ -86,7 +88,7 @@ First run caught the lexical relevance threshold set too low (0.10); raised to 0
 - Rate limiting is per instance (in memory) → Redis in M8.
 - Local ports: Postgres 5433, Redis 6380. App needs GRIDPULSE_JWT_SECRET (>= 32 bytes) to start.
 
-## Next steps
-1. Milestone 6 published (5e7e24e). OpenAI enabled locally via scripts/setup-openai.sh; publish the OpenAI scripts + re-embed fix.
-2. Verify M7: ./scripts/verify.sh && ./scripts/e2e.sh && ./scripts/load-test.sh; record load numbers; publish.
-3. Milestone 8: CI/CD, Docker image, Terraform (needs AWS approval).
+## Next steps (all 9 milestones are complete)
+1. Optional: AWS deployment (Bedrock, Terraform for ECS/ECR/RDS/S3, CloudWatch) - only when the author asks; costs money.
+2. Optional: bump actions/upload-artifact to v5 when convenient (only a deprecation notice today).
+3. Optional: split the planner chunk (ECharts) further; build warns it is > 500 kB (lazy-loaded already).
