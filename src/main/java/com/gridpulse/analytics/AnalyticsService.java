@@ -60,7 +60,10 @@ public class AnalyticsService {
         double rangeHours = Duration.between(from, to).toSeconds() / 3600.0;
         List<ChargerUsage> chargers = jdbc.query("""
                 SELECT c.id, c.label, s.name AS station, COUNT(cs.id) AS sessions,
-                       COALESCE(SUM(EXTRACT(EPOCH FROM (LEAST(cs.ends_at, ?) - GREATEST(cs.starts_at, ?))) / 3600), 0) AS hours
+                       -- CASE: for a charger with no sessions the LEFT JOIN gives NULL times, and Postgres LEAST/GREATEST
+                       -- ignore NULLs, which would count the whole range as "in use". Only real sessions count.
+                       COALESCE(SUM(CASE WHEN cs.id IS NULL THEN 0
+                                    ELSE EXTRACT(EPOCH FROM (LEAST(cs.ends_at, ?) - GREATEST(cs.starts_at, ?))) / 3600 END), 0) AS hours
                 FROM charger c
                 JOIN charging_station s ON s.id = c.station_id
                 LEFT JOIN charging_session cs ON cs.charger_id = c.id AND cs.status <> 'CANCELLED'

@@ -248,13 +248,20 @@ class ApiIT extends PostgresIntegrationTest {
                 "disruption", Map.of("at", "2026-01-05T23:00:00Z", "chargersOutOfService", List.of(UUID.randomUUID()))))
                 .andExpect(status().isNotFound());
 
+        // an idle charger must show zero use (regression: NULL times from the LEFT JOIN once counted as fully busy)
+        postJson("/api/v1/stations/" + station + "/chargers", admin,
+                Map.of("label", "C2", "connectorType", "CCS1", "maxPowerKw", 50)).andExpect(status().isCreated());
         mvc.perform(get("/api/v1/analytics/summary").param("from", "2026-01-05T00:00:00Z").param("to", "2026-01-07T00:00:00Z")
                         .header("Authorization", "Bearer " + operator))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sessionsByStatus.RESERVED").value(1))
                 .andExpect(jsonPath("$.scheduledEnergyKwh").value(100.0))
                 .andExpect(jsonPath("$.vehiclesServed").value(1))
-                .andExpect(jsonPath("$.chargers", hasSize(1)));
+                .andExpect(jsonPath("$.chargers", hasSize(2)))
+                .andExpect(jsonPath("$.chargers[1].label").value("C2"))
+                .andExpect(jsonPath("$.chargers[1].sessions").value(0))
+                .andExpect(jsonPath("$.chargers[1].occupiedHours").value(0.0))
+                .andExpect(jsonPath("$.chargers[1].utilization").value(0.0));
         mvc.perform(get("/api/v1/sessions/history").param("from", "2026-01-05T00:00:00Z").param("to", "2026-01-07T00:00:00Z")
                         .header("Authorization", "Bearer " + operator))
                 .andExpect(status().isOk())
